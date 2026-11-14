@@ -1,0 +1,224 @@
+{
+  "calibrated_at": "2026-11-14T19:47:27.376093+00:00",
+  "model_name": "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+  "dataset": "araag2/TREC_Clinical-Trials:2021_processed",
+  "label_map": {
+    "definitely relevant": "entailment",
+    "possibly relevant": "contradiction",
+    "not relevant": "neutral"
+  },
+  "n_fit": 480,
+  "n_holdout": 120,
+  "thresholds": {
+    "nli_contradiction_min": 0.45,
+    "nli_contradiction_margin": 0.15,
+    "nli_entailment_min": 0.7
+  },
+  "baseline_thresholds": {
+    "nli_contradiction_min": 0.55,
+    "nli_contradiction_margin": 0.15,
+    "nli_entailment_min": 0.8
+  },
+  "trec_holdout_baseline": {
+    "contradiction_min": 0.55,
+    "contradiction_margin": 0.15,
+    "entailment_min": 0.8,
+    "objective": 0.16946216385240775,
+    "reject_precision": 0.5555555555555556,
+    "contra_recall_reject": 0.12195121951219512,
+    "contra_recall_catch": 0.12195121951219512,
+    "false_reject_on_support": 0.05128205128205128,
+    "false_reject_on_neutral": 0.05,
+    "support_precision": 0.0,
+    "support_recall": 0.0,
+    "n_reject": 9,
+    "n_catch": 9,
+    "n_support_note": 5,
+    "action_dist": {
+      "none": 106,
+      "support_note": 5,
+      "reject": 9
+    }
+  },
+  "trec_holdout_calibrated": {
+    "contradiction_min": 0.45,
+    "contradiction_margin": 0.15,
+    "entailment_min": 0.7,
+    "objective": 0.27808317698561597,
+    "reject_precision": 0.6363636363636364,
+    "contra_recall_reject": 0.17073170731707318,
+    "contra_recall_catch": 0.21951219512195122,
+    "false_reject_on_support": 0.05128205128205128,
+    "false_reject_on_neutral": 0.05,
+    "support_precision": 0.1,
+    "support_recall": 0.02564102564102564,
+    "n_reject": 11,
+    "n_catch": 14,
+    "n_support_note": 10,
+    "action_dist": {
+      "none": 96,
+      "support_note": 10,
+      "reject": 11,
+      "review": 3
+    }
+  },
+  "synthetic_baseline": {
+    "contradiction_min": 0.55,
+    "contradiction_margin": 0.15,
+    "entailment_min": 0.8,
+    "objective": 0.6504420866489831,
+    "reject_precision": 0.5714285714285714,
+    "contra_recall_reject": 0.5333333333333333,
+    "contra_recall_catch": 0.5333333333333333,
+    "false_reject_on_support": 0.0,
+    "false_reject_on_neutral": 0.46153846153846156,
+    "support_precision": 1.0,
+    "support_recall": 0.3333333333333333,
+    "n_reject": 14,
+    "n_catch": 14,
+    "n_support_note": 4,
+    "action_dist": {
+      "support_note": 4,
+      "reject": 14,
+      "none": 22
+    }
+  },
+  "synthetic_calibrated": {
+    "contradiction_min": 0.45,
+    "contradiction_margin": 0.15,
+    "entailment_min": 0.7,
+    "objective": 0.6671087533156498,
+    "reject_precision": 0.5714285714285714,
+    "contra_recall_reject": 0.5333333333333333,
+    "contra_recall_catch": 0.6,
+    "false_reject_on_support": 0.0,
+    "false_reject_on_neutral": 0.46153846153846156,
+    "support_precision": 1.0,
+    "support_recall": 0.4166666666666667,
+    "n_reject": 14,
+    "n_catch": 15,
+    "n_support_note": 5,
+    "action_dist": {
+      "support_note": 5,
+      "reject": 14,
+      "none": 20,
+      "review": 1
+    }
+  },
+  "top5_candidates": [
+    {
+      "contradiction_min": 0.45,
+      "contradiction_margin": 0.15,
+      "entailment_min": 0.7,
+      "objective": 0.21641294581819603,
+      "reject_precision": 0.4,
+      "contra_recall_reject": 0.16352201257861634,
+      "contra_recall_catch": 0.1949685534591195,
+      "false_reject_on_support": 0.10559006211180125,
+      "false_reject_on_neutral": 0.1375,
+      "support_precision": 0.5,
+      "support_recall": 0.06832298136645963,
+      "n_reject": 65,
+      "n_catch": 80,
+      "n_support_note": 22,
+      "action_dist": {
+        "reject": 65,
+        "none": 378,
+        "support_note": 22,
+        "review": 15
+      }
+    },
+    {
+      "contradiction_min": 0.45,
+      "contradiction_margin": 0.15,
+      "entailment_min": 0.9,
+      "objective": 0.21641294581819603,
+      "reject_precision": 0.4,
+      "contra_recall_reject": 0.16352201257861634,
+      "contra_recall_catch": 0.1949685534591195,
+      "false_reject_on_support": 0.10559006211180125,
+      "false_reject_on_neutral": 0.1375,
+      "support_precision": 0.5,
+      "support_recall": 0.018633540372670808,
+      "n_reject": 65,
+      "n_catch": 80,
+      "n_support_note": 6,
+      "action_dist": {
+        "reject": 65,
+        "none": 394,
+        "review": 15,
+        "support_note": 6
+      }
+    },
+    {
+      "contradiction_min": 0.45,
+      "contradiction_margin": 0.15,
+      "entailment_min": 0.95,
+      "objective": 0.21641294581819603,
+      "reject_precision": 0.4,
+      "contra_recall_reject": 0.16352201257861634,
+      "contra_recall_catch": 0.1949685534591195,
+      "false_reject_on_support": 0.10559006211180125,
+      "false_reject_on_neutral": 0.1375,
+      "support_precision": 0.5,
+      "support_recall": 0.006211180124223602,
+      "n_reject": 65,
+      "n_catch": 80,
+      "n_support_note": 2,
+      "action_dist": {
+        "reject": 65,
+        "none": 398,
+        "review": 15,
+        "support_note": 2
+      }
+    },
+    {
+      "contradiction_min": 0.45,
+      "contradiction_margin": 0.05,
+      "entailment_min": 0.7,
+      "objective": 0.20974451711461473,
+      "reject_precision": 0.39473684210526316,
+      "contra_recall_reject": 0.18867924528301888,
+      "contra_recall_catch": 0.1949685534591195,
+      "false_reject_on_support": 0.13664596273291926,
+      "false_reject_on_neutral": 0.15,
+      "support_precision": 0.5,
+      "support_recall": 0.06832298136645963,
+      "n_reject": 76,
+      "n_catch": 80,
+      "n_support_note": 22,
+      "action_dist": {
+        "reject": 76,
+        "none": 378,
+        "support_note": 22,
+        "review": 4
+      }
+    },
+    {
+      "contradiction_min": 0.45,
+      "contradiction_margin": 0.05,
+      "entailment_min": 0.9,
+      "objective": 0.20974451711461473,
+      "reject_precision": 0.39473684210526316,
+      "contra_recall_reject": 0.18867924528301888,
+      "contra_recall_catch": 0.1949685534591195,
+      "false_reject_on_support": 0.13664596273291926,
+      "false_reject_on_neutral": 0.15,
+      "support_precision": 0.5,
+      "support_recall": 0.018633540372670808,
+      "n_reject": 76,
+      "n_catch": 80,
+      "n_support_note": 6,
+      "action_dist": {
+        "reject": 76,
+        "none": 394,
+        "support_note": 6,
+        "review": 4
+      }
+    }
+  ],
+  "notes": [
+    "No model weights were updated \u2014 thresholds only.",
+    "Use these values via env vars or defaults in config.py."
+  ]
+}

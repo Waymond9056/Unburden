@@ -34,6 +34,15 @@ data/db/*
 *.swp
 *.swo
 
+# Experimental NLI benchmark artifacts
+backend/benchmarks/_tmp_seed_pdfs/
+backend/benchmarks/nli_benchmark_last_run.json
+backend/benchmarks/verification_architecture_last_run.json
+backend/benchmarks/trec_nli/
+backend/benchmarks/trec_finetune_eval_last_run.json
+backend/benchmarks/trec_calibration_score_cache.jsonl
+backend/models/
+
 # Misc
 *.log
 .coverage

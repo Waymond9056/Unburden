@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+  deleteDocument,
   downloadEvidencePacketPdf,
   evaluatePolicy,
   getDocument,
@@ -14,6 +15,7 @@ import {
   reseedDemo,
   uploadDocument,
 } from "@/lib/api";
+import { DEFAULT_PATIENT_ID } from "@/lib/constants";
 import type {
   DocumentDetail,
   DocumentSummary,
@@ -31,7 +33,6 @@ import {
   type RequirementStatusChange,
 } from "./RequirementsChecklist";
 
-const DEFAULT_PATIENT_ID = "patient-raymond-yao";
 const STACKED_LAYOUT = "(max-width: 1023px)";
 type WorkspaceTab = "documents" | "evidence" | "requirements" | "packet";
 
@@ -77,6 +78,7 @@ export function Dashboard() {
   const [failedDocId, setFailedDocId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bootLoading, setBootLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("documents");
   const [showViewerOnMobile, setShowViewerOnMobile] = useState(false);
@@ -280,6 +282,30 @@ export function Dashboard() {
     }
   }
 
+  async function handleDelete(documentId: string) {
+    const doc = documents.find((item) => item.id === documentId);
+    const label = doc?.source_label || doc?.original_filename || "this document";
+    const confirmed = window.confirm(`Delete “${label}”? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(documentId);
+      setError(null);
+      if (selectedId === documentId) {
+        setSelectedId(null);
+        setSelectedDoc(null);
+        setFocusPage(null);
+        setHighlightQuote(null);
+      }
+      await deleteDocument(DEFAULT_PATIENT_ID, documentId);
+      await refreshLibrary(selectedId === documentId ? null : selectedId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function handleReseed() {
     const confirmed = window.confirm(
       "Reload demo documents? Uploaded PDFs will be removed.",
@@ -314,7 +340,10 @@ export function Dashboard() {
       <header className="mb-8">
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl text-ink">Unburden</h1>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted">
+              Care provider view
+            </p>
+            <h1 className="mt-1 font-display text-3xl text-ink">Unburden</h1>
           </div>
           <div className="flex flex-col items-start gap-1 sm:items-end">
             <button
@@ -460,7 +489,9 @@ export function Dashboard() {
                 selectedId={selectedId}
                 onSelect={handleSelect}
                 onUpload={handleUpload}
+                onDelete={handleDelete}
                 uploading={uploading}
+                deletingId={deletingId}
               />
             </div>
             <div

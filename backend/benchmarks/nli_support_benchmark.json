@@ -1,0 +1,288 @@
+{
+  "name": "unburden-nli-support-benchmark-v1",
+  "description": "Labeled passage/requirement pairs for zero-shot DeBERTa NLI vs lexical keyword baseline. Labels are semantic support only (not date/numeric/doc-type gates).",
+  "model_under_test": "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+  "label_set": ["entailment", "neutral", "contradiction"],
+  "examples": [
+    {
+      "id": "dx-support-1",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Assessment: Severe persistent asthma, ICD-10 J45.50. Symptoms include nocturnal awakenings despite high-dose inhaled corticosteroid therapy.",
+      "gold_label": "entailment",
+      "tags": ["seed-like", "diagnosis"]
+    },
+    {
+      "id": "dx-support-2",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Problem list updated 2025-09-18: severe persistent asthma (J45.50) confirmed by pulmonology.",
+      "gold_label": "entailment",
+      "tags": ["diagnosis", "coded"]
+    },
+    {
+      "id": "dx-ambiguous-1",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Possible asthma noted; further spirometry recommended before confirming severity.",
+      "gold_label": "neutral",
+      "tags": ["ambiguous", "trap"]
+    },
+    {
+      "id": "dx-ambiguous-2",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Suspected asthma exacerbation in childhood; adult diagnosis remains uncertain.",
+      "gold_label": "neutral",
+      "tags": ["ambiguous", "trap"]
+    },
+    {
+      "id": "dx-neutral-1",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Patient reports seasonal allergic rhinitis with watery eyes and sneezing.",
+      "gold_label": "neutral",
+      "tags": ["unrelated", "allergy"]
+    },
+    {
+      "id": "dx-contradict-1",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Asthma has been ruled out. Current diagnosis is vocal cord dysfunction only.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "trap"]
+    },
+    {
+      "id": "dx-contradict-2",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "No evidence of severe persistent asthma on chart review; mild intermittent symptoms only.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "severity"]
+    },
+    {
+      "id": "controller-support-1",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Documented high-dose inhaled corticosteroid / long-acting beta agonist trial: fluticasone-salmeterol 500/50 mcg twice daily from 2024-11-01 through 2025-09-30 (greater than 3 months continuous therapy).",
+      "gold_label": "entailment",
+      "tags": ["seed-like", "controller"]
+    },
+    {
+      "id": "controller-support-2",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Patient completed six months of high-dose inhaled corticosteroid controller therapy with Symbicort.",
+      "gold_label": "entailment",
+      "tags": ["controller", "duration"]
+    },
+    {
+      "id": "controller-support-3",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Pharmacy fill history shows continuous fluticasone-salmeterol use for four consecutive months.",
+      "gold_label": "entailment",
+      "tags": ["controller", "pharmacy"]
+    },
+    {
+      "id": "controller-prescribed-not-used",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Patient was prescribed an inhaled corticosteroid inhaler but never started it and reported zero fills.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "prescribed-not-used", "trap"]
+    },
+    {
+      "id": "controller-misleading-allergy",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Patient has seasonal allergic rhinitis. Inhaled corticosteroid spray for nasal symptoms was discussed. No systemic corticosteroid exacerbation treatment occurred at this visit.",
+      "gold_label": "contradiction",
+      "tags": ["seed-like", "misleading", "nasal", "trap"]
+    },
+    {
+      "id": "controller-discussed-only",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Controller therapy with fluticasone-salmeterol was discussed and considered, but not initiated.",
+      "gold_label": "neutral",
+      "tags": ["ambiguous", "trap"]
+    },
+    {
+      "id": "controller-neutral-1",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Patient uses as-needed albuterol for rescue only and declines daily controller medications.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "rescue-only"]
+    },
+    {
+      "id": "controller-neutral-unrelated",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Influenza vaccine administered today. No medication changes.",
+      "gold_label": "neutral",
+      "tags": ["unrelated"]
+    },
+    {
+      "id": "controller-short-course-ambiguous",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Started inhaled corticosteroid therapy last week; duration of prior controller exposure is unknown.",
+      "gold_label": "neutral",
+      "tags": ["insufficient", "duration"]
+    },
+    {
+      "id": "eos-support-1",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Collection date: 2025-08-21. Absolute eosinophil count: 420 cells/µL (reference range 0–500).",
+      "gold_label": "entailment",
+      "tags": ["seed-like", "lab", "quantitative"]
+    },
+    {
+      "id": "eos-support-2",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "CBC differential shows absolute eosinophils 510 cells/uL on 2025-07-02.",
+      "gold_label": "entailment",
+      "tags": ["lab", "quantitative"]
+    },
+    {
+      "id": "eos-below-threshold",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Absolute eosinophil count: 120 cells/µL on 2025-08-21, below the 300 cells/µL threshold.",
+      "gold_label": "contradiction",
+      "tags": ["lab", "below-threshold", "trap"]
+    },
+    {
+      "id": "eos-qualitative-only",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Eosinophils mentioned qualitatively as 'borderline elevated historically' without a dated quantitative laboratory value.",
+      "gold_label": "neutral",
+      "tags": ["seed-like", "ambiguous", "lab", "trap"]
+    },
+    {
+      "id": "eos-no-mention",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Basic metabolic panel is within normal limits. No hematology results in this note.",
+      "gold_label": "neutral",
+      "tags": ["unrelated"]
+    },
+    {
+      "id": "eos-negation",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "No eosinophilia. Absolute eosinophil count repeatedly normal at 40–80 cells/µL.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "lab"]
+    },
+    {
+      "id": "eos-wrong-cell-line",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Absolute neutrophil count: 420 cells/µL. Eosinophils not reported on this differential.",
+      "gold_label": "neutral",
+      "tags": ["trap", "wrong-analyte"]
+    },
+    {
+      "id": "exac-support-1",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Clinical course: Treated for severe asthma exacerbation with nebulized bronchodilators and systemic corticosteroids on 2025-06-12.",
+      "gold_label": "entailment",
+      "tags": ["seed-like", "exacerbation"]
+    },
+    {
+      "id": "exac-support-2",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Emergency department visit 2025-06-12 for asthma exacerbation requiring oral prednisone burst.",
+      "gold_label": "entailment",
+      "tags": ["exacerbation", "ed"]
+    },
+    {
+      "id": "exac-support-3",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Oral prednisone burst prescribed 2025-06-12 for acute exacerbation.",
+      "gold_label": "entailment",
+      "tags": ["seed-like", "steroid-burst"]
+    },
+    {
+      "id": "exac-explicit-none",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "No systemic corticosteroid exacerbation treatment occurred at this visit.",
+      "gold_label": "contradiction",
+      "tags": ["seed-like", "negation", "trap"]
+    },
+    {
+      "id": "exac-possible-only",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Possible exacerbation mentioned by patient, but no clinician-confirmed event or steroid course documented.",
+      "gold_label": "neutral",
+      "tags": ["ambiguous", "trap"]
+    },
+    {
+      "id": "exac-unrelated",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Patient reports ongoing seasonal allergies without respiratory distress.",
+      "gold_label": "neutral",
+      "tags": ["unrelated"]
+    },
+    {
+      "id": "exac-old-denied",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Patient denies any asthma exacerbation, emergency department visit, or prednisone burst in the past year.",
+      "gold_label": "contradiction",
+      "tags": ["negation"]
+    },
+    {
+      "id": "exac-infection-not-asthma",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Treated in the emergency department for acute gastroenteritis; asthma was stable and untreated.",
+      "gold_label": "contradiction",
+      "tags": ["trap", "wrong-event"]
+    },
+    {
+      "id": "controller-nasal-keyword-trap",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Allergic rhinitis managed with nasal inhaled corticosteroid spray; no pulmonary controller therapy documented.",
+      "gold_label": "contradiction",
+      "tags": ["misleading", "keyword-trap", "nasal"]
+    },
+    {
+      "id": "dx-mild-not-severe",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Assessment: mild intermittent asthma, well controlled on PRN albuterol only.",
+      "gold_label": "contradiction",
+      "tags": ["severity", "trap"]
+    },
+    {
+      "id": "lab-percent-not-absolute",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Eosinophils 4% on differential; absolute count not provided.",
+      "gold_label": "neutral",
+      "tags": ["insufficient", "lab", "trap"]
+    },
+    {
+      "id": "controller-ics-alone-support",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Patient remained on high-dose inhaled corticosteroid controller therapy for more than three months with documented adherence.",
+      "gold_label": "entailment",
+      "tags": ["controller"]
+    },
+    {
+      "id": "exac-hospitalization-support",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Hospitalized 2025-05-03 for asthma exacerbation and discharged on a systemic corticosteroid taper.",
+      "gold_label": "entailment",
+      "tags": ["exacerbation", "hospital"]
+    },
+    {
+      "id": "dx-copd-not-asthma",
+      "requirement_id": "documented_severe_asthma",
+      "passage": "Severe COPD (J44.9) without asthma overlap; spirometry consistent with fixed obstruction.",
+      "gold_label": "contradiction",
+      "tags": ["trap", "wrong-diagnosis"]
+    },
+    {
+      "id": "controller-stopped-early",
+      "requirement_id": "prior_controller_therapy",
+      "passage": "Fluticasone-salmeterol was started but stopped after one week due to cost; patient never completed a controller trial.",
+      "gold_label": "contradiction",
+      "tags": ["negation", "duration", "trap"]
+    },
+    {
+      "id": "eos-historical-no-date",
+      "requirement_id": "qualifying_eosinophil_result",
+      "passage": "Chart mentions prior eosinophilia somewhere in the past, but no laboratory value or collection date is available.",
+      "gold_label": "neutral",
+      "tags": ["insufficient", "lab"]
+    },
+    {
+      "id": "exac-steroid-for-other",
+      "requirement_id": "recent_exacerbation_history",
+      "passage": "Prednisone burst prescribed for poison ivy dermatitis; no asthma exacerbation this year.",
+      "gold_label": "contradiction",
+      "tags": ["trap", "wrong-indication"]
+    }
+  ]
+}

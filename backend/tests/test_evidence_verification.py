@@ -219,6 +219,159 @@ def test_seed_corpus_evaluation_supports_complete_set(tmp_path: Path) -> None:
     assert evaluation.overall_status == STATUS_SUPPORTED
 
 
+def _lab_candidate(db, *, doc_id: str, page: int, text: str, details: str = "{}"):
+    db.add(
+        Document(
+            id=doc_id,
+            patient_id="p1",
+            filename=f"{doc_id}.pdf",
+            original_filename=f"{doc_id}.pdf",
+            document_type="laboratory_report",
+            storage_path=f"/tmp/{doc_id}.pdf",
+            page_count=page,
+        )
+    )
+    db.add(DocumentPage(document_id=doc_id, page_number=page, text=text))
+    candidate = EvidenceCandidate(
+        id=f"c-{doc_id}-{page}",
+        patient_id="p1",
+        document_id=doc_id,
+        policy_id="fictional-severe-asthma-policy",
+        requirement_id="qualifying_eosinophil_result",
+        source_page=page,
+        supporting_quote=text,
+        extracted_details_json=details,
+        relevance_score=0.9,
+        retrieval_method="lexical",
+        verification_status="unverified_candidate",
+    )
+    db.add(candidate)
+    db.commit()
+    candidate.document = db.get(Document, doc_id)
+    return candidate
+
+
+def test_non_iso_collection_date_is_accepted() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    text = "Collection date: August 21, 2025. Absolute eosinophil count: 420 cells/µL."
+    candidate = _lab_candidate(db, doc_id="lab-month", page=1, text=text)
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "accepted"
+
+
+def test_comma_formatted_eosinophil_count_is_accepted() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    text = "Collection date: 2025-08-21. Absolute eosinophil count: 1,250 cells/uL."
+    candidate = _lab_candidate(db, doc_id="lab-comma", page=1, text=text)
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "accepted"
+
+
+def test_approximate_eosinophil_language_needs_review() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    text = "Collection date: 2025-08-21. Absolute eosinophil count ~420 cells/µL."
+    candidate = _lab_candidate(db, doc_id="lab-approx", page=1, text=text)
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "needs_review"
+    assert "approximate" in verdict.reasons[0].lower()
+
+
+def test_ambiguous_slash_date_without_iso_needs_review() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    text = "Collection date: 08/21/2025. Absolute eosinophil count: 420 cells/µL."
+    candidate = _lab_candidate(db, doc_id="lab-ambig", page=1, text=text)
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "needs_review"
+    assert "no usable date" in verdict.reasons[0].lower()
+
+
+def test_reference_range_does_not_override_measured_value() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    text = (
+        "Collection date: 2025-08-21. Absolute eosinophil count: 280 cells/µL "
+        "(reference range 0–500 cells/µL)."
+    )
+    candidate = _lab_candidate(db, doc_id="lab-ref", page=1, text=text)
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "rejected"
+    assert "280" in verdict.reasons[0]
+
+
+def test_controller_interval_accepts_month_name_dates() -> None:
+    db = _memory_session()
+    db.add(Patient(id="p1", display_name="Raymond Yao", date_of_birth=date(1985, 3, 12)))
+    db.add(
+        Document(
+            id="med",
+            patient_id="p1",
+            filename="med.pdf",
+            original_filename="med.pdf",
+            document_type="medication_record",
+            storage_path="/tmp/med.pdf",
+            page_count=1,
+        )
+    )
+    text = (
+        "Documented high-dose inhaled corticosteroid / long-acting beta agonist trial: "
+        "fluticasone-salmeterol 500/50 mcg twice daily from November 1, 2024 through "
+        "September 30, 2025 (greater than 3 months continuous therapy)."
+    )
+    db.add(DocumentPage(document_id="med", page_number=1, text=text))
+    candidate = EvidenceCandidate(
+        id="c-med",
+        patient_id="p1",
+        document_id="med",
+        policy_id="fictional-severe-asthma-policy",
+        requirement_id="prior_controller_therapy",
+        source_page=1,
+        supporting_quote=text,
+        extracted_details_json="{}",
+        relevance_score=0.9,
+        retrieval_method="lexical",
+        verification_status="unverified_candidate",
+    )
+    db.add(candidate)
+    db.commit()
+    candidate.document = db.get(Document, "med")
+    verdict = verify_candidate(
+        db,
+        candidate,
+        REQUIREMENTS_BY_ID["prior_controller_therapy"],
+        as_of_date=date(2025, 11, 1),
+    )
+    assert verdict.status == "accepted"
+
+
 def test_missing_lab_is_not_established_or_review_without_quant_lab(tmp_path: Path) -> None:
     db = _memory_session()
     from app.services.seed import PATIENT_ID, PATIENT_NAME, PATIENT_DOB

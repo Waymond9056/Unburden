@@ -16,6 +16,8 @@ from app.models.schemas import (
     EvidenceCandidateOut,
     EvidencePacketOut,
     MissingEvidenceOut,
+    NliCandidateScoreOut,
+    NliScoreBatchOut,
     PageText,
     PacketDocumentOut,
     PatientOut,
@@ -26,6 +28,13 @@ from app.services import documents as document_service
 from app.services.evidence_packet import build_evidence_packet
 from app.services.evidence_retrieval import retrieve_for_patient
 from app.services.evidence_verification import evaluate_patient_policy
+from app.services.nli_deberta import (
+    DEFAULT_MODEL_NAME,
+    NliDependenciesMissing,
+    lexical_support_label,
+    requirement_hypothesis,
+    score_requirement_passage,
+)
 from app.services.packet_export import export_evidence_packet_pdf
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID
 
@@ -108,6 +117,13 @@ def download_document_file(
     )
 
 
+@router.delete("/{patient_id}/documents/{document_id}", status_code=204)
+def delete_document(
+    patient_id: str, document_id: str, db: Session = Depends(get_db)
+) -> None:
+    document_service.delete_document(db, patient_id, document_id)
+
+
 def _candidate_out(candidate: EvidenceCandidate) -> EvidenceCandidateOut:
     requirement = REQUIREMENTS_BY_ID[candidate.requirement_id]
     return EvidenceCandidateOut(
@@ -163,6 +179,72 @@ def retrieve_evidence_candidates(
         _candidate_out(candidate)
         for candidate in retrieve_for_patient(db, patient_id)
     ]
+
+
+@router.post(
+    "/{patient_id}/evidence-candidates/nli-score",
+    response_model=NliScoreBatchOut,
+)
+def score_evidence_candidates_nli(
+    patient_id: str,
+    requirement_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> NliScoreBatchOut:
+    """Experimental DeBERTa NLI scores for retrieved candidates.
+
+    Does not change verification_status or Milestone 3 decisions.
+    """
+    document_service.ensure_patient(db, patient_id)
+    query = db.query(EvidenceCandidate).filter(
+        EvidenceCandidate.patient_id == patient_id,
+        EvidenceCandidate.policy_id == FICTIONAL_POLICY_ID,
+    )
+    if requirement_id:
+        if requirement_id not in REQUIREMENTS_BY_ID:
+            raise HTTPException(status_code=404, detail="Policy requirement not found")
+        query = query.filter(EvidenceCandidate.requirement_id == requirement_id)
+    candidates = query.order_by(
+        EvidenceCandidate.requirement_id,
+        EvidenceCandidate.relevance_score.desc(),
+        EvidenceCandidate.created_at,
+    ).all()
+
+    scores: list[NliCandidateScoreOut] = []
+    try:
+        for candidate in candidates:
+            requirement = REQUIREMENTS_BY_ID[candidate.requirement_id]
+            nli = score_requirement_passage(candidate.supporting_quote, requirement)
+            scores.append(
+                NliCandidateScoreOut(
+                    candidate_id=candidate.id,
+                    requirement_id=candidate.requirement_id,
+                    requirement_title=requirement.title,
+                    premise=nli.premise,
+                    hypothesis=nli.hypothesis,
+                    entailment=nli.entailment,
+                    neutral=nli.neutral,
+                    contradiction=nli.contradiction,
+                    predicted_label=nli.predicted_label,
+                    lexical_baseline_label=lexical_support_label(
+                        candidate.supporting_quote, requirement
+                    ),
+                    verification_status=candidate.verification_status,
+                    model_name=nli.model_name,
+                )
+            )
+    except NliDependenciesMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return NliScoreBatchOut(
+        patient_id=patient_id,
+        model_name=DEFAULT_MODEL_NAME,
+        note=(
+            "Experimental zero-shot DeBERTa NLI scores only. "
+            "Raw entailment is not a calibrated probability and does not override "
+            "deterministic verification."
+        ),
+        scores=scores,
+    )
 
 
 def _policy_evaluation_out(patient_id: str, evaluation, db: Session) -> PolicyEvaluationOut:

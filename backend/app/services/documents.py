@@ -107,3 +107,12 @@ def get_document(db: Session, patient_id: str, document_id: str) -> Document:
     if document is None:
         raise HTTPException(status_code=404, detail=f"Document not found: {document_id}")
     return document
+
+
+def delete_document(db: Session, patient_id: str, document_id: str) -> None:
+    document = get_document(db, patient_id, document_id)
+    path = Path(document.storage_path)
+    db.delete(document)
+    db.commit()
+    if path.exists():
+        path.unlink()

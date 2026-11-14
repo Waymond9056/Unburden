@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.x.ai/v1"
     llm_model: str = "grok-4-1-fast-reasoning"
 
+    # Optional DeBERTa NLI signal (negation / high-precision support). Off by
+    # default so CI and offline runs stay deterministic without model weights.
+    use_nli_support: bool = False
+    # Empty → MoritzLaurer zero-shot checkpoint. Set to a local fine-tune path
+    # (e.g. backend/models/deberta-trec-nli) after TREC fine-tuning.
+    nli_model_name: str = ""
+    # Defaults aligned with TREC calibration (araag2/TREC_Clinical-Trials).
+    # Runtime still prefers benchmarks/nli_calibrated_thresholds.json unless env set.
+    nli_contradiction_min: float = 0.45
+    nli_contradiction_margin: float = 0.15
+    nli_entailment_min: float = 0.70
+
     default_patient_id: str = "patient-raymond-yao"
 
     @property

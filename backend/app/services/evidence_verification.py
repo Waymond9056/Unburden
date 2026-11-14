@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.config import get_settings
 from app.models.db import DocumentPage, EvidenceCandidate
 from app.services.policy import (
     FICTIONAL_POLICY_ID,
@@ -15,11 +15,11 @@ from app.services.policy import (
     RequirementDefinition,
     load_policy,
 )
-
-DATE_PATTERN = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
-NUMBER_PATTERN = re.compile(
-    r"(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>cells/(?:µL|uL)|mcg|mg)",
-    flags=re.IGNORECASE,
+from app.services.value_parsing import (
+    extract_dates_from_text,
+    find_numeric_mentions,
+    parse_date_token,
+    select_threshold_values,
 )
 
 STATUS_SUPPORTED = "SUPPORTED"
@@ -90,17 +90,21 @@ def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
 
 
 def _extract_dates(candidate: EvidenceCandidate, details: dict[str, Any]) -> list[date]:
-    values: list[str] = []
+    parsed: list[date] = []
+    seen: set[date] = set()
+
     raw_dates = details.get("dates")
     if isinstance(raw_dates, list):
-        values.extend(str(item) for item in raw_dates)
-    values.extend(DATE_PATTERN.findall(candidate.supporting_quote))
-    parsed: list[date] = []
-    for value in dict.fromkeys(values):
-        try:
-            parsed.append(date.fromisoformat(value))
-        except ValueError:
-            continue
+        for item in raw_dates:
+            value = parse_date_token(str(item))
+            if value is not None and value not in seen:
+                seen.add(value)
+                parsed.append(value)
+
+    for value in extract_dates_from_text(candidate.supporting_quote or ""):
+        if value not in seen:
+            seen.add(value)
+            parsed.append(value)
     return parsed
 
 
@@ -110,22 +114,38 @@ def _months_ago(as_of: date, months: int) -> date:
     while month <= 0:
         month += 12
         year -= 1
-    day = min(as_of.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
+    day = min(
+        as_of.day,
+        [
+            31,
+            29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
+            31,
+            30,
+            31,
+            30,
+            31,
+            31,
+            30,
+            31,
+            30,
+            31,
+        ][month - 1],
+    )
     return date(year, month, day)
 
 
-def _numeric_values(candidate: EvidenceCandidate, details: dict[str, Any], unit_substring: str) -> list[float]:
-    values: list[float] = []
-    mentions = details.get("numeric_mentions")
-    if isinstance(mentions, list):
-        for mention in mentions:
-            match = NUMBER_PATTERN.search(str(mention))
-            if match and unit_substring.lower() in match.group("unit").lower():
-                values.append(float(match.group("value")))
-    for match in NUMBER_PATTERN.finditer(candidate.supporting_quote):
-        if unit_substring.lower() in match.group("unit").lower():
-            values.append(float(match.group("value")))
-    return values
+def _numeric_decision(
+    candidate: EvidenceCandidate,
+    details: dict[str, Any],
+    unit_substring: str,
+) -> tuple[list[float], bool, str | None]:
+    """Collect threshold candidates; approximate-only evidence needs review."""
+    mentions = list(find_numeric_mentions(candidate.supporting_quote or ""))
+    raw_mentions = details.get("numeric_mentions")
+    if isinstance(raw_mentions, list):
+        for item in raw_mentions:
+            mentions.extend(find_numeric_mentions(str(item)))
+    return select_threshold_values(mentions, unit_substring)
 
 
 def _interval_days(dates: list[date]) -> int | None:
@@ -134,12 +154,69 @@ def _interval_days(dates: list[date]) -> int | None:
     return (max(dates) - min(dates)).days
 
 
+def _nli_enabled(use_nli: bool | None) -> bool:
+    if use_nli is not None:
+        return use_nli
+    return bool(get_settings().use_nli_support)
+
+
+def _apply_nli_signal(
+    quote: str,
+    requirement: RequirementDefinition,
+) -> CandidateVerdict | str | None:
+    """Optional DeBERTa negation / support-note signal.
+
+    Returns:
+      - CandidateVerdict for reject/review short-circuit
+      - str support note to append if math later accepts
+      - None if NLI is unavailable or has no action
+    Never performs date/numeric comparisons.
+    """
+    from app.services.nli_deberta import (
+        NliDependenciesMissing,
+        interpret_nli_verification_signal,
+        ml_dependencies_available,
+        score_requirement_passage,
+    )
+
+    if not ml_dependencies_available():
+        return None
+    settings = get_settings()
+    model_name = (settings.nli_model_name or "").strip() or None
+    try:
+        score = (
+            score_requirement_passage(quote, requirement, model_name=model_name)
+            if model_name
+            else score_requirement_passage(quote, requirement)
+        )
+    except NliDependenciesMissing:
+        return None
+    # Thresholds: env > TREC-calibrated file > config defaults.
+    signal = interpret_nli_verification_signal(score)
+    if signal.action == "reject":
+        return CandidateVerdict(
+            candidate_id="",  # filled by caller
+            status=CANDIDATE_REJECTED,
+            reasons=[signal.reason],
+        )
+    if signal.action == "review":
+        return CandidateVerdict(
+            candidate_id="",
+            status=CANDIDATE_NEEDS_REVIEW,
+            reasons=[signal.reason],
+        )
+    if signal.action == "support_note":
+        return signal.reason
+    return None
+
+
 def verify_candidate(
     db: Session,
     candidate: EvidenceCandidate,
     requirement: RequirementDefinition,
     *,
     as_of_date: date,
+    use_nli: bool | None = None,
 ) -> CandidateVerdict:
     reasons: list[str] = []
     quote = candidate.supporting_quote or ""
@@ -195,6 +272,20 @@ def verify_candidate(
             reasons=["Passage does not contain a required clinical concept for this requirement."],
         )
 
+    # DeBERTa precision/negation signal: only after on-topic keyword gate.
+    # Date/numeric/doc-type math below remains the source of truth for thresholds.
+    nli_support_note: str | None = None
+    if _nli_enabled(use_nli):
+        nli_result = _apply_nli_signal(quote, requirement)
+        if isinstance(nli_result, CandidateVerdict):
+            return CandidateVerdict(
+                candidate_id=candidate.id,
+                status=nli_result.status,
+                reasons=nli_result.reasons,
+            )
+        if isinstance(nli_result, str) and nli_result:
+            nli_support_note = nli_result
+
     dates = _extract_dates(candidate, details)
     if requirement.temporal is not None:
         if requirement.temporal.date_required and not dates:
@@ -243,12 +334,20 @@ def verify_candidate(
             )
 
     if requirement.numeric is not None:
-        values = _numeric_values(candidate, details, requirement.numeric.unit_substring)
+        values, approximate_only, review_reason = _numeric_decision(
+            candidate, details, requirement.numeric.unit_substring
+        )
         if not values:
             return CandidateVerdict(
                 candidate_id=candidate.id,
                 status=CANDIDATE_NEEDS_REVIEW,
                 reasons=["No quantitative value with acceptable units was found."],
+            )
+        if approximate_only:
+            return CandidateVerdict(
+                candidate_id=candidate.id,
+                status=CANDIDATE_NEEDS_REVIEW,
+                reasons=[review_reason or "Approximate numeric language needs clinician review."],
             )
         if max(values) < requirement.numeric.min_value:
             return CandidateVerdict(
@@ -261,6 +360,8 @@ def verify_candidate(
             )
 
     reasons.append("Candidate satisfies structured policy constraints and source citation checks.")
+    if nli_support_note:
+        reasons.append(nli_support_note)
     return CandidateVerdict(
         candidate_id=candidate.id,
         status=CANDIDATE_ACCEPTED,
@@ -334,6 +435,7 @@ def evaluate_patient_policy(
     *,
     policy_id: str = FICTIONAL_POLICY_ID,
     persist: bool = True,
+    use_nli: bool | None = None,
 ) -> PolicyEvaluation:
     policy: PolicyDefinition = load_policy(policy_id)
     candidates = (
@@ -360,7 +462,13 @@ def evaluate_patient_policy(
     for requirement in policy.requirements:
         req_candidates = by_requirement.get(requirement.id, [])
         verdicts = [
-            verify_candidate(db, candidate, requirement, as_of_date=policy.as_of_date)
+            verify_candidate(
+                db,
+                candidate,
+                requirement,
+                as_of_date=policy.as_of_date,
+                use_nli=use_nli,
+            )
             for candidate in req_candidates
         ]
         all_verdicts.extend(verdicts)

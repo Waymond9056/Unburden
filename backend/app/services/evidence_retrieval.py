@@ -9,11 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.models.db import Document, DocumentPage, EvidenceCandidate
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS, RequirementDefinition
-
-DATE_PATTERN = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
-NUMBER_WITH_UNITS_PATTERN = re.compile(
-    r"\b\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)?\s*(?:mcg|mg|cells/(?:µL|uL))\b",
-    flags=re.IGNORECASE,
+from app.services.value_parsing import (
+    dates_as_iso_strings,
+    format_numeric_mention_strings,
+    text_contains_parseable_date,
 )
 
 
@@ -49,15 +48,15 @@ def _extract_needed_details(
 ) -> dict[str, Any]:
     details: dict[str, Any] = {}
     if "dates" in requirement.detail_fields:
-        dates = list(dict.fromkeys(DATE_PATTERN.findall(passage)))
+        dates = dates_as_iso_strings(passage)
         if dates:
             details["dates"] = dates
     if "dose_mentions" in requirement.detail_fields:
-        doses = list(dict.fromkeys(NUMBER_WITH_UNITS_PATTERN.findall(passage)))
+        doses = format_numeric_mention_strings(passage)
         if doses:
             details["dose_mentions"] = doses
     if "numeric_mentions" in requirement.detail_fields:
-        values = list(dict.fromkeys(NUMBER_WITH_UNITS_PATTERN.findall(passage)))
+        values = format_numeric_mention_strings(passage)
         if values:
             details["numeric_mentions"] = values
     details["matched_terms"] = matched_terms
@@ -82,12 +81,12 @@ def retrieve_page_candidates(
     index, start, end, terms = max(matches, key=lambda item: len(item[3]))
     # Walk backward a few sentences so nearby dates stay attached to the citation.
     cursor = index
-    while cursor > 0 and not DATE_PATTERN.search(page.text[start:end]):
+    while cursor > 0 and not text_contains_parseable_date(page.text[start:end]):
         previous_start, _, previous = passages[cursor - 1]
-        if DATE_PATTERN.search(previous) or cursor == index:
+        if text_contains_parseable_date(previous) or cursor == index:
             start = previous_start
             cursor -= 1
-            if DATE_PATTERN.search(page.text[start:end]):
+            if text_contains_parseable_date(page.text[start:end]):
                 break
             continue
         break
