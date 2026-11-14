@@ -7,7 +7,9 @@ type DocumentLibraryProps = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onUpload: (file: File) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
   uploading: boolean;
+  deletingId?: string | null;
 };
 
 function formatDate(value: string) {
@@ -31,7 +33,9 @@ export function DocumentLibrary({
   selectedId,
   onSelect,
   onUpload,
+  onDelete,
   uploading,
+  deletingId = null,
 }: DocumentLibraryProps) {
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -71,13 +75,14 @@ export function DocumentLibrary({
           documents.map((doc) => {
             const active = doc.id === selectedId;
             const name = doc.source_label || doc.original_filename;
+            const deleting = deletingId === doc.id;
             return (
-              <li key={doc.id}>
+              <li key={doc.id} className="flex items-stretch gap-1">
                 <button
                   type="button"
                   title={name}
                   onClick={() => onSelect(doc.id)}
-                  className={`w-full border-l-2 px-3 py-3 text-left ${
+                  className={`min-w-0 flex-1 border-l-2 px-3 py-3 text-left ${
                     active
                       ? "border-accent bg-white/70"
                       : "border-transparent hover:border-line hover:bg-white/40"
@@ -97,6 +102,18 @@ export function DocumentLibrary({
                     </span>
                     <span>{formatDate(doc.uploaded_at)}</span>
                   </div>
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting || uploading}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void onDelete(doc.id);
+                  }}
+                  className="shrink-0 self-center px-2 py-1 text-xs text-[#8f3d3d] hover:bg-[#fbeaea] disabled:opacity-50"
+                  aria-label={`Delete ${name}`}
+                >
+                  {deleting ? "…" : "Delete"}
                 </button>
               </li>
             );

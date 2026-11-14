@@ -34,6 +34,10 @@ data/db/*
 *.swp
 *.swo
 
+# Experimental NLI benchmark artifacts
+backend/benchmarks/_tmp_seed_pdfs/
+backend/benchmarks/nli_benchmark_last_run.json
+
 # Misc
 *.log
 .coverage

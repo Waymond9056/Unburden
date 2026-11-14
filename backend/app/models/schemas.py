@@ -139,3 +139,27 @@ class SeedResponse(BaseModel):
     patient_id: str
     documents_created: int
     document_ids: list[str]
+
+
+class NliCandidateScoreOut(BaseModel):
+    """Experimental DeBERTa NLI score for one evidence candidate (non-authoritative)."""
+
+    candidate_id: str
+    requirement_id: str
+    requirement_title: str
+    premise: str
+    hypothesis: str
+    entailment: float
+    neutral: float
+    contradiction: float
+    predicted_label: str
+    lexical_baseline_label: str
+    verification_status: str
+    model_name: str
+
+
+class NliScoreBatchOut(BaseModel):
+    patient_id: str
+    model_name: str
+    note: str
+    scores: list[NliCandidateScoreOut] = Field(default_factory=list)

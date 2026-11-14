@@ -108,6 +108,17 @@ export async function uploadDocument(
   });
 }
 
+export async function deleteDocument(patientId: string, documentId: string) {
+  const response = await fetch(
+    `${API_BASE}/api/patients/${patientId}/documents/${documentId}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `Delete failed (${response.status})`);
+  }
+}
+
 export async function reseedDemo() {
   return request<{
     patient_id: string;

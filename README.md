@@ -79,6 +79,7 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | GET | `/api/policies/{id}/requirements` | Active policy requirements |
 | GET | `/api/patients/{id}/evidence-candidates` | Requirement-linked source passages |
 | POST | `/api/patients/{id}/evidence-candidates/retrieve` | Re-run candidate retrieval |
+| POST | `/api/patients/{id}/evidence-candidates/nli-score` | Experimental DeBERTa NLI scores (optional ML deps) |
 | POST | `/api/patients/{id}/evaluate` | Run structured policy verification |
 | GET | `/api/patients/{id}/policy-evaluation` | Requirements checklist statuses |
 | GET | `/api/patients/{id}/evidence-packet` | Optimized review packet + missing checklist |
@@ -115,6 +116,19 @@ curl -X POST "http://localhost:8000/api/patients/patient-raymond-yao/documents" 
 cd backend
 source .venv/bin/activate
 pytest
+```
+
+## Experimental DeBERTa NLI (optional)
+
+Zero-shot passage→requirement support scoring with
+`MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`. This does **not** override
+deterministic Milestone 3 verification.
+
+```bash
+cd backend
+source .venv/bin/activate
+pip install -r requirements-ml.txt
+python scripts/benchmark_nli.py
 ```
 
 ## Notes
