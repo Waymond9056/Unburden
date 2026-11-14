@@ -1,0 +1,13 @@
+what are the cutoffs
+
+---
+
+explain this score simply
+
+---
+
+could we turn these 3 into an overall match % from 0 to 1, that's explainable, simply for the frontend to see?
+
+---
+
+nah no clamp is needed. make this clamp % and place it next to the support here
