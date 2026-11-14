@@ -110,10 +110,6 @@ _HYPOTHESIS_BY_REQUIREMENT_ID: dict[str, str] = {
     "qualifying_eosinophil_result": (
         "The patient has a qualifying absolute eosinophil count of at least 300 cells per microliter."
     ),
-    "recent_exacerbation_history": (
-        "The patient had a recent asthma exacerbation treated with systemic corticosteroids "
-        "or emergency care."
-    ),
 }
 
 

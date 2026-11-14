@@ -243,11 +243,11 @@ def test_seed_corpus_evaluation_supports_complete_set(tmp_path: Path) -> None:
     evaluation = evaluate_patient_policy(db, PATIENT_ID, persist=True)
     by_id = {item.requirement_id: item for item in evaluation.requirements}
 
-    # Seed corpus retrieves citations for every requirement.
+    # The demo seed cites diagnosis and controller therapy. It has no lab,
+    # so the eosinophil requirement stays empty and the chart is not READY.
     for req_id in (
         "documented_severe_asthma",
         "prior_controller_therapy",
-        "qualifying_eosinophil_result",
     ):
         item = by_id[req_id]
         assert (
@@ -256,10 +256,14 @@ def test_seed_corpus_evaluation_supports_complete_set(tmp_path: Path) -> None:
             or item.contradiction_candidate_ids
         ), req_id
 
-    # Rollup is display-status based: READY only with ≥1 support and
-    # zero contradiction. Mixed seed docs leave overall at NEEDS_REVIEW.
+    eosinophil = by_id["qualifying_eosinophil_result"]
+    assert not (
+        eosinophil.support_candidate_ids
+        or eosinophil.insufficient_candidate_ids
+        or eosinophil.contradiction_candidate_ids
+    )
+    assert by_id["prior_controller_therapy"].status == STATUS_READY
     assert evaluation.overall_status == STATUS_NEEDS_REVIEW
-    assert any(item.status == STATUS_NEEDS_REVIEW for item in evaluation.requirements)
 
 
 def _lab_candidate(db, *, doc_id: str, page: int, text: str, details: str = "{}"):

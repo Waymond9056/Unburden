@@ -80,7 +80,7 @@ export function DocumentLibrary({
                   type="button"
                   title={name}
                   onClick={() => onSelect(doc.id)}
-                  className={`min-w-0 flex-1 border-l-2 px-3 py-3 text-left ${
+                  className={`min-w-0 flex-1 border-l-2 px-3 py-3 text-left focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
                     active
                       ? "border-accent bg-white/70"
                       : "border-transparent hover:border-line hover:bg-white/40"
@@ -108,7 +108,7 @@ export function DocumentLibrary({
                     event.stopPropagation();
                     void onDelete(doc.id);
                   }}
-                  className="shrink-0 self-center px-2 py-1 text-xs text-[#8f3d3d] hover:bg-[#fbeaea] disabled:opacity-50"
+                  className="shrink-0 self-center px-2 py-1 text-xs text-[#8f3d3d] hover:bg-[#fbeaea] focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50"
                   aria-label={`Delete ${name}`}
                 >
                   {deleting ? "…" : "Delete"}

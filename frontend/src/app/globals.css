@@ -38,6 +38,20 @@ body {
   min-height: 100vh;
 }
 
+/* Ring utilities compose box-shadow from these. Set the empty defaults so a
+   focus ring still paints on elements that do not inherit a shadow utility. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    --tw-shadow: 0 0 #0000;
+    --tw-inset-shadow: 0 0 #0000;
+    --tw-inset-ring-shadow: 0 0 #0000;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+  }
+}
+
 @keyframes pulse-soft {
   0%,
   100% {

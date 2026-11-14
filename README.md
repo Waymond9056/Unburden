@@ -92,7 +92,7 @@ Open http://localhost:3000:
 
 - Documents: library, PDF upload, page text, and PDF preview
 - Requirement evidence: retrieved passages with verification status
-- Insurance requirements: SUPPORTED / NOT_ESTABLISHED / NEEDS_REVIEW
+- Insurance requirements: READY / NEEDS_REVIEW
 - Evidence packet: selected documents, missing items, and packet PDF download
 - Click a citation to open the source document on the cited page
 
@@ -106,8 +106,8 @@ Example upload:
 
 ```bash
 curl -X POST "http://localhost:8000/api/patients/patient-raymond-yao/documents" \
-  -F "file=@data/seed/lab_eosinophils.pdf" \
-  -F "document_type=laboratory_report"
+  -F "file=@data/seed/pulmonary_consult_note.pdf" \
+  -F "document_type=clinical_note"
 ```
 
 ## Tests

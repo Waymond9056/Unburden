@@ -111,7 +111,6 @@ export function Dashboard({ patientId }: { patientId: string }) {
   );
   const [evaluation, setEvaluation] = useState<PolicyEvaluation | null>(null);
   const policyIdRef = useRef(policyId);
-  policyIdRef.current = policyId;
   const [selectedPacketKeys, setSelectedPacketKeys] = useState<string[]>([]);
   const [statusChanges, setStatusChanges] = useState<RequirementStatusChange[]>(
     [],
@@ -279,6 +278,10 @@ export function Dashboard({ patientId }: { patientId: string }) {
   }
 
   useEffect(() => {
+    policyIdRef.current = policyId;
+  }, [policyId]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
@@ -396,7 +399,7 @@ export function Dashboard({ patientId }: { patientId: string }) {
       const nextEvaluation = await evaluatePolicy(patientId, policyId);
       const changes = diffRequirementStatuses(
         previousEvaluationRef.current,
-        nextEvaluation,
+        rollupRequirementStatuses(nextEvaluation),
       );
       applyEvaluation(nextEvaluation);
       if (changes.length > 0) setActiveTab("requirements");
@@ -550,10 +553,12 @@ export function Dashboard({ patientId }: { patientId: string }) {
       setDeletingId(documentId);
       setError(null);
       if (selectedId === documentId) {
-        setSelectedId(null);
-        setSelectedDoc(null);
-        setFocusPage(null);
-        setHighlightQuote(null);
+        flushSync(() => {
+          setSelectedId(null);
+          setSelectedDoc(null);
+          setFocusPage(null);
+          setHighlightQuote(null);
+        });
       }
       await deleteDocument(patientId, documentId);
       await refreshLibrary(selectedId === documentId ? null : selectedId);
@@ -614,7 +619,7 @@ export function Dashboard({ patientId }: { patientId: string }) {
                 <select
                   className="w-auto appearance-none border border-line bg-white/70 bg-[length:12px] bg-[position:right_12px_center] bg-no-repeat py-2 pl-3 pr-9 text-sm text-ink [field-sizing:content] focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                   style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23465c61' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
                   }}
                   value={policyId}
                   onChange={(event) => {

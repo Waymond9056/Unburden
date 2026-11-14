@@ -76,30 +76,6 @@
       "tags": ["negation", "nli-target"]
     },
     {
-      "id": "exac-clear-support",
-      "requirement_id": "recent_exacerbation_history",
-      "document_type": "hospital_note",
-      "quote": "Arrival date: 2025-06-12. Treated for severe asthma exacerbation with nebulized bronchodilators and systemic corticosteroids. Prednisone burst prescribed.",
-      "gold_status": "support",
-      "tags": ["support"]
-    },
-    {
-      "id": "exac-denies-any",
-      "requirement_id": "recent_exacerbation_history",
-      "document_type": "clinical_note",
-      "quote": "Patient denies any asthma exacerbation, emergency department visit, or prednisone burst in the past year. No exacerbation events documented.",
-      "gold_status": "contradiction",
-      "tags": ["negation", "nli-target"]
-    },
-    {
-      "id": "exac-phrase-reject-list",
-      "requirement_id": "recent_exacerbation_history",
-      "document_type": "clinical_note",
-      "quote": "Date of service: 2025-07-08. No systemic corticosteroid exacerbation treatment occurred at this visit.",
-      "gold_status": "contradiction",
-      "tags": ["phrase-list"]
-    },
-    {
       "id": "wrong-doc-type-lab-for-dx",
       "requirement_id": "documented_severe_asthma",
       "document_type": "laboratory_report",

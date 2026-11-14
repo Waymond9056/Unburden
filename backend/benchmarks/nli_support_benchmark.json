@@ -166,62 +166,6 @@
       "tags": ["trap", "wrong-analyte"]
     },
     {
-      "id": "exac-support-1",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Clinical course: Treated for severe asthma exacerbation with nebulized bronchodilators and systemic corticosteroids on 2025-06-12.",
-      "gold_label": "support",
-      "tags": ["seed-like", "exacerbation"]
-    },
-    {
-      "id": "exac-support-2",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Emergency department visit 2025-06-12 for asthma exacerbation requiring oral prednisone burst.",
-      "gold_label": "support",
-      "tags": ["exacerbation", "ed"]
-    },
-    {
-      "id": "exac-support-3",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Oral prednisone burst prescribed 2025-06-12 for acute exacerbation.",
-      "gold_label": "support",
-      "tags": ["seed-like", "steroid-burst"]
-    },
-    {
-      "id": "exac-explicit-none",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "No systemic corticosteroid exacerbation treatment occurred at this visit.",
-      "gold_label": "contradiction",
-      "tags": ["seed-like", "negation", "trap"]
-    },
-    {
-      "id": "exac-possible-only",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Possible exacerbation mentioned by patient, but no clinician-confirmed event or steroid course documented.",
-      "gold_label": "insufficient",
-      "tags": ["ambiguous", "trap"]
-    },
-    {
-      "id": "exac-unrelated",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Patient reports ongoing seasonal allergies without respiratory distress.",
-      "gold_label": "insufficient",
-      "tags": ["unrelated"]
-    },
-    {
-      "id": "exac-old-denied",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Patient denies any asthma exacerbation, emergency department visit, or prednisone burst in the past year.",
-      "gold_label": "contradiction",
-      "tags": ["negation"]
-    },
-    {
-      "id": "exac-infection-not-asthma",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Treated in the emergency department for acute gastroenteritis; asthma was stable and untreated.",
-      "gold_label": "contradiction",
-      "tags": ["trap", "wrong-event"]
-    },
-    {
       "id": "controller-nasal-keyword-trap",
       "requirement_id": "prior_controller_therapy",
       "passage": "Allergic rhinitis managed with nasal inhaled corticosteroid spray; no pulmonary controller therapy documented.",
@@ -250,13 +194,6 @@
       "tags": ["controller"]
     },
     {
-      "id": "exac-hospitalization-support",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Hospitalized 2025-05-03 for asthma exacerbation and discharged on a systemic corticosteroid taper.",
-      "gold_label": "support",
-      "tags": ["exacerbation", "hospital"]
-    },
-    {
       "id": "dx-copd-not-asthma",
       "requirement_id": "documented_severe_asthma",
       "passage": "Severe COPD (J44.9) without asthma overlap; spirometry consistent with fixed obstruction.",
@@ -276,13 +213,6 @@
       "passage": "Chart mentions prior eosinophilia somewhere in the past, but no laboratory value or collection date is available.",
       "gold_label": "insufficient",
       "tags": ["insufficient", "lab"]
-    },
-    {
-      "id": "exac-steroid-for-other",
-      "requirement_id": "recent_exacerbation_history",
-      "passage": "Prednisone burst prescribed for poison ivy dermatitis; no asthma exacerbation this year.",
-      "gold_label": "contradiction",
-      "tags": ["trap", "wrong-indication"]
     }
   ]
 }
