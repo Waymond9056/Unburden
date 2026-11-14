@@ -319,7 +319,7 @@ build a general-purpose clinical observation system or observations panel.
 
 **Milestone 3:** Structured policy constraints and evidence candidate verification engine (wire into the requirements checklist).
 
-**Milestone 4:** Document selection optimization and missing-evidence checklist (wire into the evidence packet / missing-info panels).
+**Milestone 4:** Exact minimum-cost packet selection over verified document→requirement mappings (evidence strength / source fit first; size secondary), plus a missing-requirements checklist derived from Milestone 3. No automated record retrieval or insurer submission.
 
 **Milestone 5:** Complete remaining dashboard interactions (citation deep-links, status-change highlights) and tighten the clinician workflow.
 

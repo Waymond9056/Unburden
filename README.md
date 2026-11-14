@@ -81,6 +81,7 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | POST | `/api/patients/{id}/evidence-candidates/retrieve` | Re-run candidate retrieval |
 | POST | `/api/patients/{id}/evaluate` | Run structured policy verification |
 | GET | `/api/patients/{id}/policy-evaluation` | Requirements checklist statuses |
+| GET | `/api/patients/{id}/evidence-packet` | Optimized review packet + missing checklist |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
 
 ## Milestone 2–3 workspace

@@ -2,6 +2,7 @@ import type {
   DocumentDetail,
   DocumentSummary,
   EvidenceCandidate,
+  EvidencePacket,
   Patient,
   PolicyEvaluation,
 } from "./types";
@@ -57,6 +58,12 @@ export function evaluatePolicy(patientId: string) {
   return request<PolicyEvaluation>(`/api/patients/${patientId}/evaluate`, {
     method: "POST",
   });
+}
+
+export function getEvidencePacket(patientId: string) {
+  return request<EvidencePacket>(
+    `/api/patients/${patientId}/evidence-packet`,
+  );
 }
 
 export function documentFileUrl(patientId: string, documentId: string) {

@@ -14,12 +14,16 @@ from app.models.schemas import (
     DocumentDetail,
     DocumentSummary,
     EvidenceCandidateOut,
+    EvidencePacketOut,
+    MissingEvidenceOut,
     PageText,
+    PacketDocumentOut,
     PatientOut,
     PolicyEvaluationOut,
     RequirementEvaluationOut,
 )
 from app.services import documents as document_service
+from app.services.evidence_packet import build_evidence_packet
 from app.services.evidence_retrieval import retrieve_for_patient
 from app.services.evidence_verification import evaluate_patient_policy
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID
@@ -237,5 +241,52 @@ def get_policy_evaluation(
         raise HTTPException(status_code=404, detail="Policy not found")
     evaluation = evaluate_patient_policy(db, patient_id, policy_id=policy_id, persist=True)
     return _policy_evaluation_out(patient_id, evaluation, db)
+
+
+@router.get("/{patient_id}/evidence-packet", response_model=EvidencePacketOut)
+def get_evidence_packet(
+    patient_id: str,
+    policy_id: str = FICTIONAL_POLICY_ID,
+    db: Session = Depends(get_db),
+) -> EvidencePacketOut:
+    """Build the clinician review packet + missing-requirements checklist."""
+    document_service.ensure_patient(db, patient_id)
+    if policy_id != FICTIONAL_POLICY_ID:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    packet = build_evidence_packet(db, patient_id, policy_id=policy_id)
+    return EvidencePacketOut(
+        patient_id=packet.patient_id,
+        policy_id=packet.policy_id,
+        policy_name=packet.policy_name,
+        disclaimer=packet.disclaimer,
+        covered_requirement_ids=list(packet.covered_requirement_ids),
+        selected_documents=[
+            PacketDocumentOut(
+                document_id=doc.document_id,
+                source_label=doc.source_label,
+                original_filename=doc.original_filename,
+                document_type=doc.document_type,
+                page_count=doc.page_count,
+                covers_requirement_ids=list(doc.covers_requirement_ids),
+                covers_requirement_titles=list(doc.covers_requirement_titles),
+                strength_score=doc.strength_score,
+            )
+            for doc in packet.selected_documents
+        ],
+        omitted_document_ids=list(packet.omitted_document_ids),
+        total_pages=packet.total_pages,
+        packet_strength=packet.packet_strength,
+        missing_evidence=[
+            MissingEvidenceOut(
+                requirement_id=item.requirement_id,
+                title=item.title,
+                status=item.status,
+                explanation=item.explanation,
+                suggested_document_types=list(item.suggested_document_types),
+            )
+            for item in packet.missing_evidence
+        ],
+        notes=list(packet.notes),
+    )
 
 

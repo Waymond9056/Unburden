@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import {
   evaluatePolicy,
   getDocument,
+  getEvidencePacket,
   getPatient,
   getPolicyEvaluation,
   listDocuments,
@@ -16,25 +17,28 @@ import type {
   DocumentDetail,
   DocumentSummary,
   EvidenceCandidate,
+  EvidencePacket,
   Patient,
   PolicyEvaluation,
 } from "@/lib/types";
 import { EvidenceCandidates } from "./EvidenceCandidates";
+import { EvidencePacketPanel } from "./EvidencePacketPanel";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { DocumentViewer } from "./DocumentViewer";
-import { PlaceholderPanel } from "./PlaceholderPanel";
 import { RequirementsChecklist } from "./RequirementsChecklist";
 
 const DEFAULT_PATIENT_ID = "patient-raymond-yao";
 const STACKED_LAYOUT = "(max-width: 1023px)";
-type WorkspaceTab = "documents" | "evidence" | "requirements";
+type WorkspaceTab = "documents" | "evidence" | "requirements" | "packet";
 
 export function Dashboard() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [evidenceCandidates, setEvidenceCandidates] = useState<EvidenceCandidate[]>([]);
   const [evaluation, setEvaluation] = useState<PolicyEvaluation | null>(null);
+  const [packet, setPacket] = useState<EvidencePacket | null>(null);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
+  const [packetLoading, setPacketLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<DocumentDetail | null>(null);
   const [failedDocId, setFailedDocId] = useState<string | null>(null);
@@ -53,17 +57,19 @@ export function Dashboard() {
     Boolean(selectedId) && !visibleDoc && failedDocId !== selectedId;
 
   async function refreshLibrary(selectId?: string | null) {
-    const [nextPatient, nextDocs, nextCandidates, nextEvaluation] =
+    const [nextPatient, nextDocs, nextCandidates, nextEvaluation, nextPacket] =
       await Promise.all([
         getPatient(DEFAULT_PATIENT_ID),
         listDocuments(DEFAULT_PATIENT_ID),
         listEvidenceCandidates(DEFAULT_PATIENT_ID),
         getPolicyEvaluation(DEFAULT_PATIENT_ID),
+        getEvidencePacket(DEFAULT_PATIENT_ID),
       ]);
     setPatient(nextPatient);
     setDocuments(nextDocs);
     setEvidenceCandidates(nextCandidates);
     setEvaluation(nextEvaluation);
+    setPacket(nextPacket);
     const nextSelected =
       selectId === undefined
         ? (nextDocs[0]?.id ?? null)
@@ -160,14 +166,33 @@ export function Dashboard() {
     try {
       setError(null);
       setEvaluationLoading(true);
+      setPacketLoading(true);
       const nextEvaluation = await evaluatePolicy(DEFAULT_PATIENT_ID);
       setEvaluation(nextEvaluation);
-      const nextCandidates = await listEvidenceCandidates(DEFAULT_PATIENT_ID);
+      const [nextCandidates, nextPacket] = await Promise.all([
+        listEvidenceCandidates(DEFAULT_PATIENT_ID),
+        getEvidencePacket(DEFAULT_PATIENT_ID),
+      ]);
       setEvidenceCandidates(nextCandidates);
+      setPacket(nextPacket);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Evaluation failed");
     } finally {
       setEvaluationLoading(false);
+      setPacketLoading(false);
+    }
+  }
+
+  async function handleRebuildPacket() {
+    try {
+      setError(null);
+      setPacketLoading(true);
+      const nextPacket = await getEvidencePacket(DEFAULT_PATIENT_ID);
+      setPacket(nextPacket);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Packet build failed");
+    } finally {
+      setPacketLoading(false);
     }
   }
 
@@ -308,6 +333,26 @@ export function Dashboard() {
             </span>
           )}
         </button>
+        <button
+          type="button"
+          role="tab"
+          id="packet-tab"
+          aria-selected={activeTab === "packet"}
+          aria-controls="packet-panel"
+          onClick={() => setActiveTab("packet")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+            activeTab === "packet"
+              ? "border-accent text-ink"
+              : "border-transparent text-muted hover:border-line hover:text-ink-soft"
+          }`}
+        >
+          Evidence packet
+          {packet && (
+            <span className="ml-2 bg-mist px-2 py-0.5 text-xs text-ink-soft">
+              {packet.selected_documents.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {bootLoading ? (
@@ -360,19 +405,12 @@ export function Dashboard() {
           id="evidence-panel"
           aria-labelledby="evidence-tab"
         >
-          <div className="grid gap-10">
-            <EvidenceCandidates
-              candidates={evidenceCandidates}
-              onOpenSource={handleOpenEvidenceSource}
-            />
-            <PlaceholderPanel
-              title="Evidence packet"
-              milestone="Milestone 4"
-              description="Optimized document selection and missing-evidence guidance will show here."
-            />
-          </div>
+          <EvidenceCandidates
+            candidates={evidenceCandidates}
+            onOpenSource={handleOpenEvidenceSource}
+          />
         </div>
-      ) : (
+      ) : activeTab === "requirements" ? (
         <div
           role="tabpanel"
           id="requirements-panel"
@@ -385,6 +423,15 @@ export function Dashboard() {
               handleOpenEvidenceSource(documentId)
             }
             onReevaluate={() => void handleReevaluate()}
+          />
+        </div>
+      ) : (
+        <div role="tabpanel" id="packet-panel" aria-labelledby="packet-tab">
+          <EvidencePacketPanel
+            packet={packet}
+            loading={packetLoading}
+            onOpenDocument={handleOpenEvidenceSource}
+            onRefresh={() => void handleRebuildPacket()}
           />
         </div>
       )}

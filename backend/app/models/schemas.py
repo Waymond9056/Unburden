@@ -97,6 +97,39 @@ class PolicyEvaluationOut(BaseModel):
     candidate_verdicts: list[CandidateVerdictOut] = Field(default_factory=list)
 
 
+class PacketDocumentOut(BaseModel):
+    document_id: str
+    source_label: str
+    original_filename: str
+    document_type: str
+    page_count: int
+    covers_requirement_ids: list[str] = Field(default_factory=list)
+    covers_requirement_titles: list[str] = Field(default_factory=list)
+    strength_score: float
+
+
+class MissingEvidenceOut(BaseModel):
+    requirement_id: str
+    title: str
+    status: str
+    explanation: str
+    suggested_document_types: list[str] = Field(default_factory=list)
+
+
+class EvidencePacketOut(BaseModel):
+    patient_id: str
+    policy_id: str
+    policy_name: str
+    disclaimer: str
+    covered_requirement_ids: list[str] = Field(default_factory=list)
+    selected_documents: list[PacketDocumentOut] = Field(default_factory=list)
+    omitted_document_ids: list[str] = Field(default_factory=list)
+    total_pages: int
+    packet_strength: float
+    missing_evidence: list[MissingEvidenceOut] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class HealthResponse(BaseModel):
     status: str
     app: str

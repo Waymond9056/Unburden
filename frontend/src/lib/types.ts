@@ -67,3 +67,36 @@ export type PolicyEvaluation = {
   overall_status: string;
   requirements: RequirementEvaluation[];
 };
+
+export type PacketDocument = {
+  document_id: string;
+  source_label: string;
+  original_filename: string;
+  document_type: string;
+  page_count: number;
+  covers_requirement_ids: string[];
+  covers_requirement_titles: string[];
+  strength_score: number;
+};
+
+export type MissingEvidenceItem = {
+  requirement_id: string;
+  title: string;
+  status: string;
+  explanation: string;
+  suggested_document_types: string[];
+};
+
+export type EvidencePacket = {
+  patient_id: string;
+  policy_id: string;
+  policy_name: string;
+  disclaimer: string;
+  covered_requirement_ids: string[];
+  selected_documents: PacketDocument[];
+  omitted_document_ids: string[];
+  total_pages: number;
+  packet_strength: number;
+  missing_evidence: MissingEvidenceItem[];
+  notes: string[];
+};
