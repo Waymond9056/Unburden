@@ -1,0 +1,51 @@
+this worked great. it uploaded
+
+here's the only issue, its not parsing the document. should i hold more still or is the python library bugging since its not a pdf?
+
+---
+
+what are our options? explain pymupdf OCR and how it works and how hard it would be to add in
+
+---
+
+nice, i really like that. use OCR when text is empty so our baseline is still simple PyMuPDF
+
+---
+
+Page 1
+«ee
+* +1 (762) 2811929
+e@
+—
+——=_—‘i‘i‘icél
+a
+_
+Laboratory Report: Absolute Eosinophil Count
+Page 2
+.
+aoe
+«@
+C2
+(41 (762) 241-1929»
+[ )
+X
+pa
+.- © OO
+
+ngl it didn't work toooo well
+
+---
+
+nice, this worked really well.
+
+the transcription isn't perfect
+
+moreso, when i upload the document normally it parses perfectly with 96% match, but this facetime upload is only 50% match
+
+---
+
+how does it fix it? deterministic medical ocr?
+
+---
+
+we dont need LLM cleanup for now
