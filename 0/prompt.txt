@@ -1,0 +1,11 @@
+**Milestone 5:** Complete remaining dashboard interactions (citation deep-links, status-change highlights) and tighten the clinician workflow.
+
+i dont know if anything needs to be done. dont add any unecessary features genuinely. actually dont build this yet. what are you gonna add in milestone 5?
+
+---
+
+actually i like 1, 2, 3. implement htese
+
+---
+
+shouldn't the export be the prior authorization document that's actually submitted to the insurance provider? attach the documents right

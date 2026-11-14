@@ -1,0 +1,52 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7CM3JMHV9S3XSV0G7H4YMDT",
+  "session_id": "3aa252d1-aaff-4b86-8153-5b6320c8dcd8",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T08:52:10.331571Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "save_step_count": 2,
+  "files_touched": [
+    "README.md",
+    "backend/app/api/patients.py",
+    "backend/app/services/packet_export.py",
+    "backend/tests/test_packet_export.py",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/DocumentViewer.tsx",
+    "frontend/src/components/EvidenceCandidates.tsx",
+    "frontend/src/components/EvidencePacketPanel.tsx",
+    "frontend/src/components/RequirementsChecklist.tsx",
+    "frontend/src/lib/api.ts"
+  ],
+  "agent": "Cursor",
+  "model": "default",
+  "turn_id": "c57b792429b9",
+  "checkpoint_transcript_start": 151,
+  "transcript_lines_at_start": 151,
+  "compact_transcript_start": 36,
+  "token_usage": {
+    "input_tokens": 203978,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2705408,
+    "output_tokens": 20001,
+    "api_call_count": 3
+  },
+  "redaction": {
+    "replacements": 2,
+    "layers": {
+      "betterleaks": 2,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 1,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 10
+  }
+}
