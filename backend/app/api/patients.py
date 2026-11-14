@@ -48,7 +48,7 @@ def get_patient(patient_id: str, db: Session = Depends(get_db)) -> Patient:
 async def upload_document(
     patient_id: str,
     file: UploadFile = File(...),
-    document_type: str = Form(default="clinical_note"),
+    document_type: str = Form(default=""),
     source_label: str | None = Form(default=None),
     db: Session = Depends(get_db),
 ) -> DocumentSummary:
@@ -59,7 +59,7 @@ async def upload_document(
         db,
         patient_id=patient_id,
         upload=file,
-        document_type=document_type,
+        document_type=document_type.strip(),
         source_label=source_label,
     )
     return _document_summary(document)

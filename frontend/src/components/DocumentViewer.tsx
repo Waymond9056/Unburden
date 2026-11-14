@@ -16,7 +16,7 @@ export function DocumentViewer({
 }: DocumentViewerProps) {
   if (loading) {
     return (
-      <section className="animate-fade flex h-full items-center justify-center text-sm text-muted">
+      <section className="flex h-full items-center justify-center text-sm text-muted">
         Loading document…
       </section>
     );
@@ -24,14 +24,14 @@ export function DocumentViewer({
 
   if (!document) {
     return (
-      <section className="animate-fade flex h-full items-center justify-center px-6 text-center text-sm text-muted">
+      <section className="flex h-full items-center justify-center px-6 text-center text-sm text-muted">
         Select a document to preview the PDF and extracted text.
       </section>
     );
   }
 
   return (
-    <section className="animate-rise stagger-3 flex h-full min-h-0 flex-col gap-4">
+    <section className="flex h-full min-h-0 flex-col gap-4">
       <header>
         <h2 className="font-display text-2xl text-ink">
           {document.source_label || document.original_filename}

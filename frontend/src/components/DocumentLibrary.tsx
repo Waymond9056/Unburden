@@ -20,8 +20,10 @@ function formatDate(value: string) {
   });
 }
 
-function prettyType(value: string) {
-  return value.replaceAll("_", " ");
+function typeLabel(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "Uploaded";
+  return trimmed.replaceAll("_", " ");
 }
 
 export function DocumentLibrary({
@@ -32,7 +34,7 @@ export function DocumentLibrary({
   uploading,
 }: DocumentLibraryProps) {
   return (
-    <section className="animate-rise stagger-2 flex h-full min-h-0 flex-col">
+    <section className="flex h-full min-h-0 flex-col">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl text-ink">Document library</h2>
@@ -41,7 +43,7 @@ export function DocumentLibrary({
           </p>
         </div>
         <label
-          className={`cursor-pointer border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-deep ${
+          className={`relative cursor-pointer border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 focus-within:ring-offset-paper ${
             uploading ? "uploading-pulse pointer-events-none opacity-70" : ""
           }`}
         >
@@ -49,7 +51,7 @@ export function DocumentLibrary({
           <input
             type="file"
             accept="application/pdf,.pdf"
-            className="hidden"
+            className="sr-only"
             disabled={uploading}
             onChange={async (event) => {
               const file = event.target.files?.[0];
@@ -68,22 +70,28 @@ export function DocumentLibrary({
         ) : (
           documents.map((doc) => {
             const active = doc.id === selectedId;
+            const name = doc.source_label || doc.original_filename;
             return (
               <li key={doc.id}>
                 <button
                   type="button"
+                  title={name}
                   onClick={() => onSelect(doc.id)}
-                  className={`w-full border-l-2 px-3 py-3 text-left transition ${
+                  className={`w-full border-l-2 px-3 py-3 text-left ${
                     active
                       ? "border-accent bg-white/70"
                       : "border-transparent hover:border-line hover:bg-white/40"
                   }`}
                 >
-                  <div className="truncate text-sm font-medium text-ink">
-                    {doc.source_label || doc.original_filename}
+                  <div
+                    className={`text-sm font-medium text-ink ${
+                      active ? "whitespace-normal break-words" : "truncate"
+                    }`}
+                  >
+                    {name}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-                    <span className="capitalize">{prettyType(doc.document_type)}</span>
+                    <span className="capitalize">{typeLabel(doc.document_type)}</span>
                     <span>
                       {doc.page_count} page{doc.page_count === 1 ? "" : "s"}
                     </span>
