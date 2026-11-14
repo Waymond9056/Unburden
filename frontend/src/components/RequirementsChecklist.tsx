@@ -2,10 +2,22 @@
 
 import type { PolicyEvaluation, RequirementEvaluation } from "@/lib/types";
 
+export type RequirementStatusChange = {
+  requirement_id: string;
+  title: string;
+  from: string;
+  to: string;
+};
+
 type RequirementsChecklistProps = {
   evaluation: PolicyEvaluation | null;
   loading?: boolean;
-  onOpenCandidate: (documentId: string, page: number) => void;
+  statusChanges?: RequirementStatusChange[];
+  onOpenCandidate: (
+    documentId: string,
+    page: number,
+    quote?: string,
+  ) => void;
   onReevaluate: () => void;
 };
 
@@ -27,17 +39,33 @@ function statusStyles(status: string) {
 
 function RequirementBlock({
   item,
+  change,
   onOpenCandidate,
 }: {
   item: RequirementEvaluation;
-  onOpenCandidate: (documentId: string, page: number) => void;
+  change?: RequirementStatusChange;
+  onOpenCandidate: (
+    documentId: string,
+    page: number,
+    quote?: string,
+  ) => void;
 }) {
   const citations = [...item.supporting_candidates, ...item.review_candidates];
   return (
-    <article className="border-t border-line/70 py-4">
+    <article
+      className={`border-t border-line/70 py-4 ${
+        change ? "bg-[#fff8ef]/70 ring-1 ring-[#c48a2e]/35" : ""
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-xl text-ink">{item.title}</h3>
+          {change && (
+            <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#8a6230]">
+              Changed · {change.from.replaceAll("_", " ")} →{" "}
+              {change.to.replaceAll("_", " ")}
+            </p>
+          )}
         </div>
         <span
           className={`border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(item.status)}`}
@@ -53,7 +81,11 @@ function RequirementBlock({
               <button
                 type="button"
                 onClick={() =>
-                  onOpenCandidate(candidate.document_id, candidate.source_page)
+                  onOpenCandidate(
+                    candidate.document_id,
+                    candidate.source_page,
+                    candidate.supporting_quote,
+                  )
                 }
                 className={`w-full border px-3 py-2 text-left transition hover:opacity-90 ${statusStyles(candidate.verification_status)}`}
               >
@@ -82,6 +114,7 @@ function RequirementBlock({
 export function RequirementsChecklist({
   evaluation,
   loading,
+  statusChanges = [],
   onOpenCandidate,
   onReevaluate,
 }: RequirementsChecklistProps) {
@@ -112,6 +145,10 @@ export function RequirementsChecklist({
     );
   }
 
+  const changeById = new Map(
+    statusChanges.map((change) => [change.requirement_id, change]),
+  );
+
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -140,6 +177,14 @@ export function RequirementsChecklist({
         </div>
       </div>
 
+      {statusChanges.length > 0 && (
+        <div className="mb-4 border border-[#c48a2e]/40 bg-[#fff8ef] px-3 py-2 text-sm text-[#8a6230]">
+          {statusChanges.length} requirement
+          {statusChanges.length === 1 ? "" : "s"} changed since the last
+          evaluation.
+        </div>
+      )}
+
       <p className="text-xs uppercase tracking-[0.14em] text-muted">
         Logic {evaluation.logic} · as of {evaluation.as_of_date}
       </p>
@@ -149,6 +194,7 @@ export function RequirementsChecklist({
           <RequirementBlock
             key={item.requirement_id}
             item={item}
+            change={changeById.get(item.requirement_id)}
             onOpenCandidate={onOpenCandidate}
           />
         ))}

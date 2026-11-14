@@ -66,6 +66,28 @@ export function getEvidencePacket(patientId: string) {
   );
 }
 
+export function evidencePacketExportUrl(patientId: string) {
+  return `${API_BASE}/api/patients/${patientId}/evidence-packet/export`;
+}
+
+export async function downloadEvidencePacketPdf(patientId: string) {
+  const response = await fetch(evidencePacketExportUrl(patientId));
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `Export failed (${response.status})`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] || `unburden-pa-evidence-packet-${patientId}.pdf`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function documentFileUrl(patientId: string, documentId: string) {
   return `${API_BASE}/api/patients/${patientId}/documents/${documentId}/file`;
 }

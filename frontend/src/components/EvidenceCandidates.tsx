@@ -2,7 +2,7 @@ import type { EvidenceCandidate } from "@/lib/types";
 
 type EvidenceCandidatesProps = {
   candidates: EvidenceCandidate[];
-  onOpenSource: (documentId: string) => void;
+  onOpenSource: (documentId: string, page: number, quote?: string) => void;
 };
 
 function groupedCandidates(candidates: EvidenceCandidate[]) {
@@ -77,7 +77,13 @@ export function EvidenceCandidates({
                     </blockquote>
                     <button
                       type="button"
-                      onClick={() => onOpenSource(candidate.document_id)}
+                      onClick={() =>
+                        onOpenSource(
+                          candidate.document_id,
+                          candidate.source_page,
+                          candidate.supporting_quote,
+                        )
+                      }
                       className="mt-4 self-start text-left text-xs font-medium text-accent-deep underline decoration-accent/35 underline-offset-4 hover:decoration-accent-deep focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                     >
                       {candidate.source_document_name || "Source document"} · page{" "}

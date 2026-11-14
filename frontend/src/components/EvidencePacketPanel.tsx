@@ -7,6 +7,7 @@ type EvidencePacketPanelProps = {
   loading?: boolean;
   onOpenDocument: (documentId: string) => void;
   onRefresh: () => void;
+  onExport: () => void;
 };
 
 function statusStyles(status: string) {
@@ -25,6 +26,7 @@ export function EvidencePacketPanel({
   loading,
   onOpenDocument,
   onRefresh,
+  onExport,
 }: EvidencePacketPanelProps) {
   if (loading) {
     return (
@@ -58,20 +60,30 @@ export function EvidencePacketPanel({
           <div>
             <h2 className="font-display text-2xl text-ink">Evidence packet</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-              What to send for clinician review — verified sources only. Size is
-              secondary to evidence strength and source fit.
+              Submission-ready packet: cover sheet plus the selected supporting
+              PDFs. Download attaches those documents for insurer review packing.
+              Unburden does not transmit or approve coverage.
             </p>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-muted">
               {packet.disclaimer}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onRefresh}
-            className="border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white"
-          >
-            Rebuild packet
-          </button>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <button
+              type="button"
+              onClick={onExport}
+              className="border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-deep"
+            >
+              Download packet PDF
+            </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white"
+            >
+              Rebuild packet
+            </button>
+          </div>
         </div>
 
         <p className="text-xs uppercase tracking-[0.14em] text-muted">

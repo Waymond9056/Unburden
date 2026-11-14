@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+  downloadEvidencePacketPdf,
   evaluatePolicy,
   getDocument,
   getEvidencePacket,
@@ -25,22 +26,54 @@ import { EvidenceCandidates } from "./EvidenceCandidates";
 import { EvidencePacketPanel } from "./EvidencePacketPanel";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { DocumentViewer } from "./DocumentViewer";
-import { RequirementsChecklist } from "./RequirementsChecklist";
+import {
+  RequirementsChecklist,
+  type RequirementStatusChange,
+} from "./RequirementsChecklist";
 
 const DEFAULT_PATIENT_ID = "patient-raymond-yao";
 const STACKED_LAYOUT = "(max-width: 1023px)";
 type WorkspaceTab = "documents" | "evidence" | "requirements" | "packet";
 
+function diffRequirementStatuses(
+  previous: PolicyEvaluation | null,
+  next: PolicyEvaluation | null,
+): RequirementStatusChange[] {
+  if (!previous || !next) return [];
+  const prevById = new Map(
+    previous.requirements.map((item) => [item.requirement_id, item]),
+  );
+  const changes: RequirementStatusChange[] = [];
+  for (const item of next.requirements) {
+    const before = prevById.get(item.requirement_id);
+    if (!before || before.status === item.status) continue;
+    changes.push({
+      requirement_id: item.requirement_id,
+      title: item.title,
+      from: before.status,
+      to: item.status,
+    });
+  }
+  return changes;
+}
+
 export function Dashboard() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
-  const [evidenceCandidates, setEvidenceCandidates] = useState<EvidenceCandidate[]>([]);
+  const [evidenceCandidates, setEvidenceCandidates] = useState<
+    EvidenceCandidate[]
+  >([]);
   const [evaluation, setEvaluation] = useState<PolicyEvaluation | null>(null);
   const [packet, setPacket] = useState<EvidencePacket | null>(null);
+  const [statusChanges, setStatusChanges] = useState<RequirementStatusChange[]>(
+    [],
+  );
   const [evaluationLoading, setEvaluationLoading] = useState(false);
   const [packetLoading, setPacketLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<DocumentDetail | null>(null);
+  const [focusPage, setFocusPage] = useState<number | null>(null);
+  const [highlightQuote, setHighlightQuote] = useState<string | null>(null);
   const [failedDocId, setFailedDocId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -50,11 +83,26 @@ export function Dashboard() {
   const libraryRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const scrollIntent = useRef<"viewer" | "library" | null>(null);
+  const previousEvaluationRef = useRef<PolicyEvaluation | null>(null);
+  const skipStatusDiffRef = useRef(true);
 
   const visibleDoc =
     selectedId && selectedDoc?.id === selectedId ? selectedDoc : null;
   const docLoading =
     Boolean(selectedId) && !visibleDoc && failedDocId !== selectedId;
+
+  function applyEvaluation(nextEvaluation: PolicyEvaluation) {
+    if (skipStatusDiffRef.current) {
+      skipStatusDiffRef.current = false;
+      setStatusChanges([]);
+    } else {
+      setStatusChanges(
+        diffRequirementStatuses(previousEvaluationRef.current, nextEvaluation),
+      );
+    }
+    previousEvaluationRef.current = nextEvaluation;
+    setEvaluation(nextEvaluation);
+  }
 
   async function refreshLibrary(selectId?: string | null) {
     const [nextPatient, nextDocs, nextCandidates, nextEvaluation, nextPacket] =
@@ -68,7 +116,7 @@ export function Dashboard() {
     setPatient(nextPatient);
     setDocuments(nextDocs);
     setEvidenceCandidates(nextCandidates);
-    setEvaluation(nextEvaluation);
+    applyEvaluation(nextEvaluation);
     setPacket(nextPacket);
     const nextSelected =
       selectId === undefined
@@ -133,12 +181,14 @@ export function Dashboard() {
     if (!window.matchMedia(STACKED_LAYOUT).matches) return;
     const node = intent === "viewer" ? viewerRef.current : libraryRef.current;
     node?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [activeTab, showViewerOnMobile, selectedId]);
+  }, [activeTab, showViewerOnMobile, selectedId, focusPage]);
 
   function handleSelect(id: string) {
     const alreadyShowing =
       showViewerOnMobile && selectedId === id && visibleDoc?.id === id;
     setFailedDocId(null);
+    setFocusPage(null);
+    setHighlightQuote(null);
     setSelectedId(id);
     setShowViewerOnMobile(true);
     if (!window.matchMedia(STACKED_LAYOUT).matches) return;
@@ -154,11 +204,17 @@ export function Dashboard() {
     setShowViewerOnMobile(false);
   }
 
-  function handleOpenEvidenceSource(id: string) {
+  function handleOpenEvidenceSource(
+    id: string,
+    page?: number,
+    quote?: string,
+  ) {
     scrollIntent.current = "viewer";
     setActiveTab("documents");
     setFailedDocId(null);
     setSelectedId(id);
+    setFocusPage(page ?? null);
+    setHighlightQuote(quote ?? null);
     setShowViewerOnMobile(true);
   }
 
@@ -168,13 +224,18 @@ export function Dashboard() {
       setEvaluationLoading(true);
       setPacketLoading(true);
       const nextEvaluation = await evaluatePolicy(DEFAULT_PATIENT_ID);
-      setEvaluation(nextEvaluation);
+      const changes = diffRequirementStatuses(
+        previousEvaluationRef.current,
+        nextEvaluation,
+      );
+      applyEvaluation(nextEvaluation);
       const [nextCandidates, nextPacket] = await Promise.all([
         listEvidenceCandidates(DEFAULT_PATIENT_ID),
         getEvidencePacket(DEFAULT_PATIENT_ID),
       ]);
       setEvidenceCandidates(nextCandidates);
       setPacket(nextPacket);
+      if (changes.length > 0) setActiveTab("requirements");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Evaluation failed");
     } finally {
@@ -196,12 +257,22 @@ export function Dashboard() {
     }
   }
 
+  async function handleExportPacket() {
+    try {
+      setError(null);
+      await downloadEvidencePacketPdf(DEFAULT_PATIENT_ID);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Packet export failed");
+    }
+  }
+
   async function handleUpload(file: File) {
     try {
       setUploading(true);
       setError(null);
       const created = await uploadDocument(DEFAULT_PATIENT_ID, file);
       await refreshLibrary(created.id);
+      setActiveTab("requirements");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -215,14 +286,17 @@ export function Dashboard() {
     );
     if (!confirmed) return;
 
-    // Drop the preview before the reseed deletes the file it points at.
     flushSync(() => {
       setError(null);
       setBootLoading(true);
       setSelectedId(null);
       setSelectedDoc(null);
+      setFocusPage(null);
+      setHighlightQuote(null);
       setFailedDocId(null);
       setShowViewerOnMobile(false);
+      setStatusChanges([]);
+      skipStatusDiffRef.current = true;
     });
 
     try {
@@ -238,11 +312,9 @@ export function Dashboard() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8">
       <header className="mb-8">
- 
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-5xl text-ink">Unburden</h1>
-
           </div>
           <div className="flex flex-col items-start gap-1 sm:items-end">
             <button
@@ -259,11 +331,9 @@ export function Dashboard() {
 
       {patient && (
         <div className="mb-6 border-y border-line/80 py-4">
-        
           <p className="mt-1 font-display text-2xl text-ink">
             {patient.display_name}
           </p>
-     
         </div>
       )}
 
@@ -273,10 +343,21 @@ export function Dashboard() {
         </div>
       )}
 
+      {statusChanges.length > 0 && activeTab !== "requirements" && (
+        <button
+          type="button"
+          onClick={() => setActiveTab("requirements")}
+          className="mb-6 w-full border border-[#c48a2e]/40 bg-[#fff8ef] px-4 py-3 text-left text-sm text-[#8a6230] hover:opacity-90"
+        >
+          {statusChanges.length} insurance requirement
+          {statusChanges.length === 1 ? "" : "s"} changed — view checklist
+        </button>
+      )}
+
       <div
         role="tablist"
         aria-label="Unburden workspace"
-        className="mb-8 flex border-b border-line"
+        className="mb-8 flex flex-wrap border-b border-line"
       >
         <button
           type="button"
@@ -394,6 +475,8 @@ export function Dashboard() {
                   patientId={DEFAULT_PATIENT_ID}
                   document={visibleDoc}
                   loading={docLoading}
+                  focusPage={focusPage}
+                  highlightQuote={highlightQuote}
                 />
               </div>
             </div>
@@ -419,9 +502,8 @@ export function Dashboard() {
           <RequirementsChecklist
             evaluation={evaluation}
             loading={evaluationLoading}
-            onOpenCandidate={(documentId) =>
-              handleOpenEvidenceSource(documentId)
-            }
+            statusChanges={statusChanges}
+            onOpenCandidate={handleOpenEvidenceSource}
             onReevaluate={() => void handleReevaluate()}
           />
         </div>
@@ -430,8 +512,11 @@ export function Dashboard() {
           <EvidencePacketPanel
             packet={packet}
             loading={packetLoading}
-            onOpenDocument={handleOpenEvidenceSource}
+            onOpenDocument={(documentId) =>
+              handleOpenEvidenceSource(documentId)
+            }
             onRefresh={() => void handleRebuildPacket()}
+            onExport={() => void handleExportPacket()}
           />
         </div>
       )}

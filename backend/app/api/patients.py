@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -26,6 +26,7 @@ from app.services import documents as document_service
 from app.services.evidence_packet import build_evidence_packet
 from app.services.evidence_retrieval import retrieve_for_patient
 from app.services.evidence_verification import evaluate_patient_policy
+from app.services.packet_export import export_evidence_packet_pdf
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -287,6 +288,31 @@ def get_evidence_packet(
             for item in packet.missing_evidence
         ],
         notes=list(packet.notes),
+    )
+
+
+@router.get("/{patient_id}/evidence-packet/export")
+def export_evidence_packet(
+    patient_id: str,
+    policy_id: str = FICTIONAL_POLICY_ID,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Download the PA evidence packet PDF (cover + attached source documents)."""
+    document_service.ensure_patient(db, patient_id)
+    if policy_id != FICTIONAL_POLICY_ID:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    try:
+        pdf_bytes, filename = export_evidence_packet_pdf(
+            db, patient_id, policy_id=policy_id
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 
