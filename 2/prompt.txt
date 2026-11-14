@@ -1,0 +1,11 @@
+is coder here
+
+---
+
+Connect my agent to Chert so I can FaceTime it. Follow https://app.trychert.com/skills.md
+
+---
+
+Connect my agent to Chert so I can FaceTime it. Follow https://app.trychert.com/skills.md. Reuse my existing Chert account and project c9d332da-8aee-4f51-92d7-e88d10336ccb; do not create another project. Complete any remaining setup and phone verification through the existing CLI onboarding flow. If setup is already complete, continue from there. Keep credentials out of chat.
+
+here are the instructions. but i think you alraedy di dthis
