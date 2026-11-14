@@ -1,4 +1,4 @@
-# Optional ML extras for experimental zero-shot DeBERTa NLI scoring.
+# Optional ML extras for experimental zero-shot / fine-tuned DeBERTa NLI.
 # Keep these out of requirements.txt so the core API stays lightweight.
 #
 #   pip install -r requirements-ml.txt
@@ -6,3 +6,7 @@
 torch>=2.2.0
 transformers>=4.40.0
 sentencepiece>=0.2.0
+datasets>=2.18.0
+accelerate>=0.27.0
+evaluate>=0.4.0
+scikit-learn>=1.4.0

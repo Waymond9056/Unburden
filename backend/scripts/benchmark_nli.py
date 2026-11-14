@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Benchmark zero-shot DeBERTa NLI against the lexical keyword baseline.
+"""Compare lexical / DeBERTa / PubMedBERT-MedNLI / ensemble on the NLI benchmark.
 
 Usage (from backend/):
 
     pip install -r requirements-ml.txt
     python scripts/benchmark_nli.py
 
-Does not change verification decisions. Prints accuracy / per-label metrics and
-scores the live seed evidence candidates for side-by-side inspection.
+Does not change verification decisions.
 """
 
 from __future__ import annotations
@@ -21,7 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.services.nli_deberta import (  # noqa: E402
+    BIOMED_MODEL_NAME,
     DEFAULT_MODEL_NAME,
+    LABEL_NEUTRAL,
     NliDependenciesMissing,
     lexical_support_label,
     ml_dependencies_available,
@@ -31,6 +32,7 @@ from app.services.nli_deberta import (  # noqa: E402
 from app.services.policy import REQUIREMENTS_BY_ID  # noqa: E402
 
 BENCHMARK_PATH = ROOT / "benchmarks" / "nli_support_benchmark.json"
+SYSTEMS = ("lexical", "deberta", "pubmedbert", "ensemble")
 
 
 def _load_benchmark() -> dict:
@@ -98,79 +100,124 @@ def _tag_slice_accuracy(
     return correct, len(matched)
 
 
-def run_labeled_benchmark(*, model_name: str = DEFAULT_MODEL_NAME) -> dict:
+def run_labeled_benchmark() -> dict:
     payload = _load_benchmark()
     examples = payload["examples"]
     gold = [item["gold_label"] for item in examples]
-    lexical_preds: list[str] = []
-    deberta_preds: list[str] = []
+    preds: dict[str, list[str]] = {name: [] for name in SYSTEMS}
     rows: list[dict] = []
+    agree_count = 0
 
     for item in examples:
         requirement = REQUIREMENTS_BY_ID[item["requirement_id"]]
         hypothesis = requirement_hypothesis(requirement)
         lexical = lexical_support_label(item["passage"], requirement)
-        lexical_preds.append(lexical)
-        score = score_passage(item["passage"], hypothesis, model_name=model_name)
-        deberta_preds.append(score.predicted_label)
+        deberta = score_passage(
+            item["passage"], hypothesis, model_name=DEFAULT_MODEL_NAME
+        )
+        biomed = score_passage(
+            item["passage"], hypothesis, model_name=BIOMED_MODEL_NAME
+        )
+        agreed = deberta.predicted_label == biomed.predicted_label
+        ensemble_label = deberta.predicted_label if agreed else LABEL_NEUTRAL
+        if agreed:
+            agree_count += 1
+
+        preds["lexical"].append(lexical)
+        preds["deberta"].append(deberta.predicted_label)
+        preds["pubmedbert"].append(biomed.predicted_label)
+        preds["ensemble"].append(ensemble_label)
+
         rows.append(
             {
                 "id": item["id"],
                 "requirement_id": item["requirement_id"],
                 "gold": item["gold_label"],
                 "lexical": lexical,
-                "deberta": score.predicted_label,
-                "entailment": round(score.entailment, 4),
-                "neutral": round(score.neutral, 4),
-                "contradiction": round(score.contradiction, 4),
+                "deberta": deberta.predicted_label,
+                "pubmedbert": biomed.predicted_label,
+                "ensemble": ensemble_label,
+                "ensemble_agreed": agreed,
+                "deberta_scores": {
+                    "E": round(deberta.entailment, 4),
+                    "N": round(deberta.neutral, 4),
+                    "C": round(deberta.contradiction, 4),
+                },
+                "pubmedbert_scores": {
+                    "E": round(biomed.entailment, 4),
+                    "N": round(biomed.neutral, 4),
+                    "C": round(biomed.contradiction, 4),
+                },
                 "tags": item.get("tags", []),
-                "agree_lexical": lexical == item["gold_label"],
-                "agree_deberta": score.predicted_label == item["gold_label"],
             }
         )
 
-    lexical_metrics = _metrics(gold, lexical_preds)
-    deberta_metrics = _metrics(gold, deberta_preds)
+    metrics = {name: _metrics(gold, preds[name]) for name in SYSTEMS}
 
     print(f"Benchmark: {BENCHMARK_PATH.name}  n={len(examples)}")
-    print(f"Model: {model_name}")
-    _print_metrics("Lexical keyword baseline", lexical_metrics)
-    _print_metrics("DeBERTa-v3 zero-shot NLI", deberta_metrics)
+    print(f"DeBERTa:     {DEFAULT_MODEL_NAME}")
+    print(f"PubMedBERT:  {BIOMED_MODEL_NAME}")
+    print(
+        f"Ensemble:    agree→label, disagree→neutral "
+        f"(agreement={agree_count}/{len(examples)} = {agree_count / len(examples):.3f})"
+    )
 
-    print("\n=== Hard-slice accuracy (DeBERTa / Lexical) ===")
-    for tag in ("trap", "negation", "misleading", "ambiguous", "seed-like"):
-        d_ok, d_n = _tag_slice_accuracy(examples, deberta_preds, tag)
-        l_ok, l_n = _tag_slice_accuracy(examples, lexical_preds, tag)
-        if d_n == 0 and l_n == 0:
-            continue
+    _print_metrics("1) Lexical keyword baseline", metrics["lexical"])
+    _print_metrics("2) DeBERTa-v3 zero-shot NLI", metrics["deberta"])
+    _print_metrics("3) PubMedBERT-MNLI-MedNLI", metrics["pubmedbert"])
+    _print_metrics("4) Ensemble (DeBERTa + PubMedBERT)", metrics["ensemble"])
+
+    print("\n=== Head-to-head summary ===")
+    print(
+        f"{'system':12s}  {'acc':>6s}  {'macroF1':>8s}  "
+        f"{'entP':>6s}  {'entR':>6s}  {'conP':>6s}  {'conR':>6s}"
+    )
+    for name in SYSTEMS:
+        m = metrics[name]
+        ent = m["per_label"].get("entailment", {})
+        con = m["per_label"].get("contradiction", {})
         print(
-            f"  {tag:12s}  deberta={d_ok}/{d_n} ({(d_ok / d_n) if d_n else 0:.3f})  "
-            f"lexical={l_ok}/{l_n} ({(l_ok / l_n) if l_n else 0:.3f})"
+            f"{name:12s}  {m['accuracy']:6.3f}  {m['macro_f1']:8.3f}  "
+            f"{ent.get('precision', 0):6.3f}  {ent.get('recall', 0):6.3f}  "
+            f"{con.get('precision', 0):6.3f}  {con.get('recall', 0):6.3f}"
         )
 
-    disagreements = [
+    print("\n=== Hard-slice accuracy ===")
+    for tag in ("trap", "negation", "misleading", "ambiguous", "seed-like"):
+        parts = []
+        for name in SYSTEMS:
+            ok, n = _tag_slice_accuracy(examples, preds[name], tag)
+            if n == 0:
+                continue
+            parts.append(f"{name}={ok}/{n} ({ok / n:.3f})")
+        if parts:
+            print(f"  {tag:12s}  " + "  ".join(parts))
+
+    interesting = [
         row
         for row in rows
-        if row["agree_deberta"] != row["agree_lexical"] or row["deberta"] != row["lexical"]
+        if len({row["lexical"], row["deberta"], row["pubmedbert"], row["ensemble"]}) > 1
+        or not row["ensemble_agreed"]
     ]
-    print(f"\n=== Disagreements / interesting rows ({len(disagreements)}) ===")
-    for row in disagreements[:25]:
-        mark = "OK" if row["agree_deberta"] else "MISS"
+    print(f"\n=== Disagreements / interesting rows ({len(interesting)}) ===")
+    for row in interesting[:30]:
+        mark = "OK" if row["ensemble"] == row["gold"] else "MISS"
         print(
             f"  [{mark}] {row['id']}: gold={row['gold']}  "
-            f"lex={row['lexical']}  deb={row['deberta']}  "
-            f"E={row['entailment']:.2f}/N={row['neutral']:.2f}/C={row['contradiction']:.2f}"
+            f"lex={row['lexical']} deb={row['deberta']} "
+            f"pub={row['pubmedbert']} ens={row['ensemble']}"
+            f"{'' if row['ensemble_agreed'] else ' [DISAGREE→neutral]'}"
         )
 
     return {
-        "lexical": lexical_metrics,
-        "deberta": deberta_metrics,
+        "metrics": metrics,
+        "preds": preds,
         "rows": rows,
+        "agreement_rate": agree_count / len(examples) if examples else 0.0,
     }
 
 
-def score_seed_candidates(*, model_name: str = DEFAULT_MODEL_NAME) -> list[dict]:
-    """Retrieve candidates from synthetic seed PDFs and score them (no DB writes)."""
+def score_seed_candidates() -> list[dict]:
     from app.models.db import Document, DocumentPage
     from app.services.evidence_retrieval import retrieve_page_candidates
     from app.services.pdf_extract import extract_pages
@@ -204,13 +251,23 @@ def score_seed_candidates(*, model_name: str = DEFAULT_MODEL_NAME) -> list[dict]
                     page=page,
                     requirement=requirement,
                 ):
-                    score = score_passage(
-                        candidate.supporting_quote,
-                        requirement_hypothesis(requirement),
-                        model_name=model_name,
-                    )
+                    hypothesis = requirement_hypothesis(requirement)
                     lexical = lexical_support_label(
                         candidate.supporting_quote, requirement
+                    )
+                    deberta = score_passage(
+                        candidate.supporting_quote,
+                        hypothesis,
+                        model_name=DEFAULT_MODEL_NAME,
+                    )
+                    biomed = score_passage(
+                        candidate.supporting_quote,
+                        hypothesis,
+                        model_name=BIOMED_MODEL_NAME,
+                    )
+                    agreed = deberta.predicted_label == biomed.predicted_label
+                    ensemble_label = (
+                        deberta.predicted_label if agreed else LABEL_NEUTRAL
                     )
                     rows.append(
                         {
@@ -218,22 +275,27 @@ def score_seed_candidates(*, model_name: str = DEFAULT_MODEL_NAME) -> list[dict]
                             "requirement_id": requirement.id,
                             "quote": candidate.supporting_quote[:160].replace("\n", " "),
                             "lexical": lexical,
-                            "deberta": score.predicted_label,
-                            "entailment": round(score.entailment, 4),
-                            "neutral": round(score.neutral, 4),
-                            "contradiction": round(score.contradiction, 4),
+                            "deberta": deberta.predicted_label,
+                            "pubmedbert": biomed.predicted_label,
+                            "ensemble": ensemble_label,
+                            "ensemble_agreed": agreed,
+                            "deberta_E": round(deberta.entailment, 4),
+                            "pubmedbert_E": round(biomed.entailment, 4),
                         }
                     )
 
     print(f"\n=== Seed evidence candidates scored ({len(rows)}) ===")
-    by_req: dict[str, int] = Counter(row["requirement_id"] for row in rows)
-    print("counts by requirement:", dict(by_req))
+    print("counts by requirement:", dict(Counter(row["requirement_id"] for row in rows)))
     for row in rows:
         print(
-            f"  {row['document'][:28]:28s} {row['requirement_id'][:28]:28s} "
-            f"lex={row['lexical']:13s} deb={row['deberta']:13s} "
-            f"E={row['entailment']:.2f}  | {row['quote'][:90]}..."
+            f"  {row['document'][:26]:26s} {row['requirement_id'][:24]:24s} "
+            f"lex={row['lexical'][:1]} deb={row['deberta'][:1]} "
+            f"pub={row['pubmedbert'][:1]} ens={row['ensemble'][:1]}"
+            f"{'' if row['ensemble_agreed'] else '*'}  "
+            f"Edeb={row['deberta_E']:.2f} Epub={row['pubmedbert_E']:.2f}  "
+            f"| {row['quote'][:70]}..."
         )
+    print("  legend: e/n/c = entailment/neutral/contradiction; * = models disagreed")
     return rows
 
 
@@ -256,10 +318,14 @@ def main() -> int:
     out_path.write_text(
         json.dumps(
             {
-                "model": DEFAULT_MODEL_NAME,
+                "models": {
+                    "deberta": DEFAULT_MODEL_NAME,
+                    "pubmedbert": BIOMED_MODEL_NAME,
+                    "ensemble": "agree→label, disagree→neutral",
+                },
                 "labeled": {
-                    "lexical": results["lexical"],
-                    "deberta": results["deberta"],
+                    "metrics": results["metrics"],
+                    "agreement_rate": results["agreement_rate"],
                     "rows": results["rows"],
                 },
                 "seed_candidates": seed_rows,

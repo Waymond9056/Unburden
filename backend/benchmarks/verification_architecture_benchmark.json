@@ -1,0 +1,119 @@
+{
+  "name": "m3-vs-m3-deberta-architecture-v1",
+  "description": "Gold candidate verdicts for Milestone 3 only vs Milestone 3 + DeBERTa negation/precision signal. Numeric/date decisions stay with M3 in both modes.",
+  "as_of_date": "2025-11-01",
+  "cases": [
+    {
+      "id": "lab-clear-support",
+      "requirement_id": "qualifying_eosinophil_result",
+      "document_type": "laboratory_report",
+      "quote": "Collection date: 2025-08-21. Absolute eosinophil count: 420 cells/µL.",
+      "gold_status": "accepted",
+      "tags": ["math", "support"]
+    },
+    {
+      "id": "lab-below-threshold",
+      "requirement_id": "qualifying_eosinophil_result",
+      "document_type": "laboratory_report",
+      "quote": "Collection date: 2025-08-21. Absolute eosinophil count: 180 cells/µL.",
+      "gold_status": "rejected",
+      "tags": ["math", "threshold"]
+    },
+    {
+      "id": "lab-stale-date",
+      "requirement_id": "qualifying_eosinophil_result",
+      "document_type": "laboratory_report",
+      "quote": "Collection date: 2023-01-01. Absolute eosinophil count: 420 cells/µL.",
+      "gold_status": "rejected",
+      "tags": ["math", "temporal"]
+    },
+    {
+      "id": "lab-approx-needs-review",
+      "requirement_id": "qualifying_eosinophil_result",
+      "document_type": "laboratory_report",
+      "quote": "Collection date: 2025-08-21. Absolute eosinophil count ~420 cells/µL.",
+      "gold_status": "needs_review",
+      "tags": ["math", "approximate"]
+    },
+    {
+      "id": "dx-clear-support",
+      "requirement_id": "documented_severe_asthma",
+      "document_type": "clinical_note",
+      "quote": "Assessment: Severe persistent asthma, ICD-10 J45.50.",
+      "gold_status": "accepted",
+      "tags": ["support"]
+    },
+    {
+      "id": "dx-ruled-out-negation",
+      "requirement_id": "documented_severe_asthma",
+      "document_type": "clinical_note",
+      "quote": "Severe persistent asthma has been ruled out. Current diagnosis is vocal cord dysfunction only. J45.50 was removed from the problem list.",
+      "gold_status": "rejected",
+      "tags": ["negation", "nli-target"]
+    },
+    {
+      "id": "controller-clear-interval",
+      "requirement_id": "prior_controller_therapy",
+      "document_type": "medication_record",
+      "quote": "Documented high-dose inhaled corticosteroid / long-acting beta agonist trial: fluticasone-salmeterol 500/50 mcg twice daily from 2024-11-01 through 2025-09-30 (greater than 3 months continuous therapy).",
+      "gold_status": "accepted",
+      "tags": ["math", "support"]
+    },
+    {
+      "id": "controller-prescribed-never-started",
+      "requirement_id": "prior_controller_therapy",
+      "document_type": "medication_record",
+      "quote": "Fluticasone-salmeterol inhaled corticosteroid controller was prescribed on 2024-11-01 and again on 2025-02-01, but the patient never started it and reported zero fills.",
+      "gold_status": "rejected",
+      "tags": ["negation", "nli-target"]
+    },
+    {
+      "id": "controller-stopped-after-one-week",
+      "requirement_id": "prior_controller_therapy",
+      "document_type": "medication_record",
+      "quote": "Fluticasone-salmeterol inhaled corticosteroid therapy was started 2025-01-01 but stopped after one week due to cost; patient never completed a controller trial lasting three months.",
+      "gold_status": "rejected",
+      "tags": ["negation", "nli-target"]
+    },
+    {
+      "id": "exac-clear-support",
+      "requirement_id": "recent_exacerbation_history",
+      "document_type": "hospital_note",
+      "quote": "Arrival date: 2025-06-12. Treated for severe asthma exacerbation with nebulized bronchodilators and systemic corticosteroids. Prednisone burst prescribed.",
+      "gold_status": "accepted",
+      "tags": ["support"]
+    },
+    {
+      "id": "exac-denies-any",
+      "requirement_id": "recent_exacerbation_history",
+      "document_type": "clinical_note",
+      "quote": "Patient denies any asthma exacerbation, emergency department visit, or prednisone burst in the past year. No exacerbation events documented.",
+      "gold_status": "rejected",
+      "tags": ["negation", "nli-target"]
+    },
+    {
+      "id": "exac-phrase-reject-list",
+      "requirement_id": "recent_exacerbation_history",
+      "document_type": "clinical_note",
+      "quote": "Date of service: 2025-07-08. No systemic corticosteroid exacerbation treatment occurred at this visit.",
+      "gold_status": "rejected",
+      "tags": ["phrase-list"]
+    },
+    {
+      "id": "wrong-doc-type-lab-for-dx",
+      "requirement_id": "documented_severe_asthma",
+      "document_type": "laboratory_report",
+      "quote": "Assessment: Severe persistent asthma, ICD-10 J45.50.",
+      "gold_status": "rejected",
+      "tags": ["math", "doc-type"]
+    },
+    {
+      "id": "controller-single-date-needs-review",
+      "requirement_id": "prior_controller_therapy",
+      "document_type": "medication_record",
+      "quote": "Patient remains on high-dose inhaled corticosteroid controller therapy with fluticasone-salmeterol as of 2025-09-30.",
+      "gold_status": "needs_review",
+      "tags": ["math", "interval"]
+    }
+  ]
+}

@@ -121,14 +121,27 @@ pytest
 ## Experimental DeBERTa NLI (optional)
 
 Zero-shot passage→requirement support scoring with
-`MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`. This does **not** override
-deterministic Milestone 3 verification.
+`MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`.
+
+Default: **off**. When `USE_NLI_SUPPORT=true`, DeBERTa acts only as a
+**negation / high-precision support signal** beside Milestone 3 math — it does
+not decide dates, numeric thresholds, or document types.
 
 ```bash
 cd backend
 source .venv/bin/activate
 pip install -r requirements-ml.txt
 python scripts/benchmark_nli.py
+python scripts/benchmark_verification_architecture.py
+
+# Recommended: calibrate gate thresholds on 3-way TREC (no weight updates)
+python scripts/calibrate_nli_thresholds.py
+# Writes benchmarks/nli_calibrated_thresholds.json used by the M3+DeBERTa gate.
+
+# Optional / experimental: full fine-tune (previously collapsed to always-entailment)
+python scripts/prepare_trec_nli_splits.py
+python scripts/finetune_deberta_trec.py
+python scripts/eval_trec_finetune.py
 ```
 
 ## Notes
