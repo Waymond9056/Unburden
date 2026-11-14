@@ -1,0 +1,65 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7E2Q9ZFPZ6C9QCW44GNP4YW",
+  "session_id": "d4eb60e1-dc4d-436e-be13-6070426c2b69",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T22:26:51.362444Z",
+  "branch": "chert",
+  "checkpoints_count": 17,
+  "save_step_count": 13,
+  "files_touched": [
+    ".env.example",
+    ".gitignore",
+    "agents/document-intake/.env.example",
+    "agents/document-intake/.gitignore",
+    "agents/document-intake/AGENTS.md",
+    "agents/document-intake/CLAUDE.md",
+    "agents/document-intake/README.md",
+    "agents/document-intake/agent.mjs",
+    "agents/document-intake/capture.mjs",
+    "agents/document-intake/chert-rooms.mjs",
+    "agents/document-intake/face.mjs",
+    "agents/document-intake/greet.mjs",
+    "agents/document-intake/package-lock.json",
+    "agents/document-intake/package.json",
+    "agents/document-intake/silent-audio.mjs",
+    "agents/document-intake/speak.mjs",
+    "agents/document-intake/upload.mjs",
+    "backend/app/api/chert.py",
+    "backend/app/core/config.py",
+    "backend/app/main.py",
+    "backend/app/services/chert_calls.py",
+    "backend/requirements.txt",
+    "frontend/src/components/PatientUploadView.tsx",
+    "frontend/src/lib/api.ts",
+    "frontend/src/lib/types.ts"
+  ],
+  "agent": "Cursor",
+  "model": "default",
+  "turn_id": "ae298251638b",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 161846,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 9417728,
+    "output_tokens": 58455,
+    "api_call_count": 15
+  },
+  "redaction": {
+    "replacements": 37,
+    "layers": {
+      "betterleaks": 14,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 30,
+      "credentialed_uri": 0,
+      "entropy": 13,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 17
+  }
+}

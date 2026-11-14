@@ -1,0 +1,89 @@
+i want to implement Chert into this now. in the patient view page, alongside the upload option, there should be another button that connects to Chert and rings an agent, which we can present a document to with our facetime video that uploads it to the document database. does that make sense
+
+don't build yet. plan this out, figure out how chert works, and connect it all. chert is already built in here
+
+---
+
+1. once you click the ring button, the agent will call you once its ready
+2. lets try building camera capture frames. lets start with that
+3. sure
+4. hardcode for now
+draft up the plan once ur sure
+
+---
+
+1. project API KEY: REDACTED
+2. not sure what the ID is
+everything else worked. i tested and the thing could call me
+
+---
+
+Success criteria for the demo
+On patient view for Raymond, click Ring document assistant.
+Phone gets a FaceTime Video call.
+Agent asks you to hold up a document.
+A PDF lands in the document DB and appears in the provider library with a FaceTime source_label.
+
+this sounds perfect. build this now.
+
+---
+
+Success criteria for the demo
+On patient view for Raymond, click Ring document assistant.
+Phone gets a FaceTime Video call.
+Agent asks you to hold up a document.
+A PDF lands in the document DB and appears in the provider library with a FaceTime source_label.
+
+this sounds perfect. build this now.
+
+---
+
+give it 7622411929 as my phone number
+
+why do we need livekit?
+
+---
+
+oh bc there's no way for hte agnet to upload my document right
+
+---
+
+wait im pretty sure chert can see videos from facetime? no?
+
+---
+
+alright what else do you need before we stat
+
+---
+
+LIVEKIT_URL=wss://unburden-rxa858t2.livekit.cloud
+LIVEKIT_API_KEY=REDACTED
+REDACTED
+
+---
+
+bring up the app. so that i can go into the app and click the ring agent butotn
+
+---
+
+ringnig now. anthing being logged?
+
+---
+
+still not gettin ga call
+
+---
+
+nice! it called me
+
+---
+
+uh. it didn't say anything and hung up on me
+
+---
+
+wait shouldn't i add an agent here?
+
+---
+
+wow, it worked
