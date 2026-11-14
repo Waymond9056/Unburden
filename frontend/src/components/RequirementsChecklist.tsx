@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { getChertSession, ringDocumentAssistant } from "@/lib/api";
+import { DEFAULT_PATIENT_ID } from "@/lib/constants";
 import type {
   CandidateStatus,
+  ChertSession,
   EvidenceCandidate,
   PolicyEvaluation,
   RequirementEvaluation,
@@ -14,10 +18,60 @@ export type RequirementStatusChange = {
   to: string;
 };
 
+type RingPhase =
+  | "idle"
+  | "preparing"
+  | "ringing"
+  | "active"
+  | "uploaded"
+  | "failed";
+
+function phaseFromSession(session: ChertSession): RingPhase {
+  const status = session.status.toLowerCase();
+  if (session.document_id || status === "uploaded") return "uploaded";
+  if (status === "failed" || status === "ended") return "failed";
+  if (
+    status === "active" ||
+    status === "answered" ||
+    status === "bridge_ready" ||
+    status === "in_call"
+  ) {
+    return "active";
+  }
+  if (
+    status === "ringing" ||
+    status === "queued" ||
+    status === "dialing" ||
+    status === "allocated"
+  ) {
+    return "ringing";
+  }
+  if (status === "preparing") return "preparing";
+  return "ringing";
+}
+
+function ringStatusLabel(phase: RingPhase): string {
+  switch (phase) {
+    case "preparing":
+      return "Preparing FaceTime…";
+    case "ringing":
+      return "Ringing patient…";
+    case "active":
+      return "On the call…";
+    case "uploaded":
+      return "Document uploaded";
+    case "failed":
+      return "Request failed";
+    default:
+      return "";
+  }
+}
+
 type RequirementsChecklistProps = {
   evaluation: PolicyEvaluation | null;
   loading?: boolean;
   statusChanges?: RequirementStatusChange[];
+  patientId?: string;
   onOpenCandidate: (
     documentId: string,
     page: number,
@@ -137,11 +191,23 @@ function requirementCitations(item: RequirementEvaluation) {
 function RequirementBlock({
   item,
   change,
+  canRequest,
+  requestDisabled,
+  requestPhase,
+  requestError,
+  requestLabel,
+  onRequestDocumentation,
   onOpenCandidate,
   onUpdateCandidateStatus,
 }: {
   item: RequirementEvaluation;
   change?: RequirementStatusChange;
+  canRequest: boolean;
+  requestDisabled: boolean;
+  requestPhase: RingPhase | null;
+  requestError: string | null;
+  requestLabel: string | null;
+  onRequestDocumentation: () => void;
   onOpenCandidate: (
     documentId: string,
     page: number,
@@ -153,6 +219,10 @@ function RequirementBlock({
   ) => Promise<void> | void;
 }) {
   const citations = requirementCitations(item);
+  const requestBusy =
+    requestPhase === "preparing" ||
+    requestPhase === "ringing" ||
+    requestPhase === "active";
   return (
     <article
       className={`border-t border-line/70 py-4 ${
@@ -160,7 +230,7 @@ function RequirementBlock({
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="font-display text-xl text-ink">{item.title}</h3>
           {change && (
             <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#8a6230]">
@@ -172,6 +242,34 @@ function RequirementBlock({
             <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-soft">
               {item.explanation}
             </p>
+          )}
+          {canRequest && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={requestDisabled || requestBusy}
+                onClick={onRequestDocumentation}
+                className="border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-deep focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {requestBusy ? "Requesting…" : "Request Documentation"}
+              </button>
+              {requestPhase && requestPhase !== "idle" && (
+                <p
+                  className={`text-xs ${
+                    requestPhase === "failed"
+                      ? "text-[#8f3d3d]"
+                      : requestPhase === "uploaded"
+                        ? "text-[#0f5a51]"
+                        : "text-muted"
+                  }`}
+                >
+                  {requestError ||
+                    (requestPhase === "uploaded" && requestLabel
+                      ? `Uploaded · ${requestLabel}`
+                      : ringStatusLabel(requestPhase))}
+                </p>
+              )}
+            </div>
           )}
         </div>
         <span
@@ -266,10 +364,83 @@ export function RequirementsChecklist({
   evaluation,
   loading,
   statusChanges = [],
+  patientId,
   onOpenCandidate,
   onReevaluate,
   onUpdateCandidateStatus,
 }: RequirementsChecklistProps) {
+  const canRequest = patientId === DEFAULT_PATIENT_ID;
+  const [activeRequirementId, setActiveRequirementId] = useState<string | null>(
+    null,
+  );
+  const [ringPhase, setRingPhase] = useState<RingPhase>("idle");
+  const [ringError, setRingError] = useState<string | null>(null);
+  const [ringLabel, setRingLabel] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+
+  const ringBusy =
+    ringPhase === "preparing" ||
+    ringPhase === "ringing" ||
+    ringPhase === "active";
+
+  useEffect(() => {
+    if (!patientId || !canRequest) return;
+    if (ringPhase === "idle" || ringPhase === "uploaded" || ringPhase === "failed") {
+      return;
+    }
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const session = await getChertSession(patientId, sessionId);
+        if (cancelled) return;
+        const next = phaseFromSession(session);
+        setRingPhase(next);
+        if (session.source_label) setRingLabel(session.source_label);
+        if (session.error && next === "failed") setRingError(session.error);
+      } catch (err) {
+        if (!cancelled) {
+          setRingError(
+            err instanceof Error ? err.message : "Could not refresh call status",
+          );
+        }
+      }
+    };
+
+    void tick();
+    const id = window.setInterval(() => void tick(), 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [ringPhase, patientId, canRequest]);
+
+  async function handleRequestDocumentation(
+    requirementId: string,
+    title: string,
+  ) {
+    if (!patientId || !canRequest || ringBusy) return;
+    try {
+      setActiveRequirementId(requirementId);
+      setRingError(null);
+      setRingLabel(null);
+      setRingPhase("preparing");
+      const session = await ringDocumentAssistant(patientId, {
+        requirement_title: title,
+      });
+      sessionIdRef.current = session.session_id;
+      setRingPhase(phaseFromSession(session));
+      if (session.error) setRingError(session.error);
+    } catch (err) {
+      setRingPhase("failed");
+      setRingError(
+        err instanceof Error ? err.message : "Could not start FaceTime call",
+      );
+    }
+  }
+
   if (loading && !evaluation) {
     return (
       <section className="text-sm text-muted">
@@ -317,15 +488,26 @@ export function RequirementsChecklist({
       )}
 
       <div className="mt-2">
-        {evaluation.requirements.map((item) => (
-          <RequirementBlock
-            key={item.requirement_id}
-            item={item}
-            change={changeById.get(item.requirement_id)}
-            onOpenCandidate={onOpenCandidate}
-            onUpdateCandidateStatus={onUpdateCandidateStatus}
-          />
-        ))}
+        {evaluation.requirements.map((item) => {
+          const isActive = activeRequirementId === item.requirement_id;
+          return (
+            <RequirementBlock
+              key={item.requirement_id}
+              item={item}
+              change={changeById.get(item.requirement_id)}
+              canRequest={canRequest}
+              requestDisabled={ringBusy}
+              requestPhase={isActive ? ringPhase : null}
+              requestError={isActive ? ringError : null}
+              requestLabel={isActive ? ringLabel : null}
+              onRequestDocumentation={() =>
+                void handleRequestDocumentation(item.requirement_id, item.title)
+              }
+              onOpenCandidate={onOpenCandidate}
+              onUpdateCandidateStatus={onUpdateCandidateStatus}
+            />
+          );
+        })}
       </div>
     </section>
   );

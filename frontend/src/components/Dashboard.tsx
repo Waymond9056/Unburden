@@ -784,6 +784,7 @@ export function Dashboard({ patientId }: { patientId: string }) {
             evaluation={evaluation}
             loading={evaluationLoading}
             statusChanges={statusChanges}
+            patientId={patientId}
             onOpenCandidate={handleOpenEvidenceSource}
             onReevaluate={() => void handleReevaluate()}
             onUpdateCandidateStatus={(candidateId, status) =>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -166,6 +167,7 @@ async def start_document_ring(
     settings: Settings,
     *,
     patient_id: str,
+    requirement_title: str | None = None,
 ) -> ChertSession:
     _require_chert(settings)
     _require_livekit(settings)
@@ -174,10 +176,15 @@ async def start_document_ring(
     room_name = f"unburden-{patient_id}-{session_id[:8]}"
     dispatch_name = settings.chert_agent_name
     bridge_identity = f"chert-bridge-out-{session_id[:8]}"
-    metadata = (
-        f'{{"patient_id":"{patient_id}","session_id":"{session_id}",'
-        f'"unburden_patient_id":"{patient_id}","unburden_session_id":"{session_id}"}}'
-    )
+    meta: dict[str, str] = {
+        "patient_id": patient_id,
+        "session_id": session_id,
+        "unburden_patient_id": patient_id,
+        "unburden_session_id": session_id,
+    }
+    if requirement_title:
+        meta["requirement_title"] = requirement_title
+    metadata = json.dumps(meta)
 
     session = ChertSession(
         session_id=session_id,

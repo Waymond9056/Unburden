@@ -175,9 +175,19 @@ export async function reseedDemo() {
   }>("/api/demo/seed", { method: "POST" });
 }
 
-export function ringDocumentAssistant(patientId: string) {
+export function ringDocumentAssistant(
+  patientId: string,
+  opts?: { requirement_title?: string },
+) {
+  const title = opts?.requirement_title?.trim();
   return request<ChertSession>(`/api/patients/${patientId}/chert/ring`, {
     method: "POST",
+    ...(title
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requirement_title: title }),
+        }
+      : {}),
   });
 }
 

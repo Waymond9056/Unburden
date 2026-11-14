@@ -30,6 +30,10 @@ class UploadedBody(BaseModel):
     source_label: str | None = None
 
 
+class RingBody(BaseModel):
+    requirement_title: str | None = Field(default=None, max_length=300)
+
+
 def _to_out(session: chert_calls.ChertSession) -> ChertSessionOut:
     return ChertSessionOut(
         session_id=session.session_id,
@@ -45,15 +49,22 @@ def _to_out(session: chert_calls.ChertSession) -> ChertSessionOut:
 
 
 @router.post("/ring", response_model=ChertSessionOut)
-async def ring_document_assistant(patient_id: str) -> ChertSessionOut:
+async def ring_document_assistant(
+    patient_id: str, body: RingBody = RingBody()
+) -> ChertSessionOut:
     if patient_id != RINGABLE_PATIENT_ID:
         raise HTTPException(
             status_code=400,
             detail="FaceTime document assistant is only enabled for the Raymond Yao demo patient.",
         )
     settings = get_settings()
+    requirement_title = (body.requirement_title or "").strip() or None
     try:
-        session = await chert_calls.start_document_ring(settings, patient_id=patient_id)
+        session = await chert_calls.start_document_ring(
+            settings,
+            patient_id=patient_id,
+            requirement_title=requirement_title,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 — surface Chert/LiveKit failures to the UI

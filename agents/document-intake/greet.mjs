@@ -73,8 +73,8 @@ export function greetWhenFaceTimeReady(room, greet) {
 
   function onParticipant(participant) {
     if (!isBridgeParticipant(participant)) return;
-    // Give FaceTime / caller camera a moment after the bridge joins.
-    timer = setTimeout(fire, 2500);
+    // Give FaceTime audio/video a moment after the bridge joins so the greeting is heard.
+    timer = setTimeout(fire, 4000);
   }
 
   room.on(METADATA_CHANGED, onMeta);

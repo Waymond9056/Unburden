@@ -18,6 +18,7 @@ import { publishSilentMic } from './silent-audio.mjs';
 import { synthesizeSpeechPcm16 } from './speak.mjs';
 import {
   patientIdFromMetadata,
+  requirementTitleFromMetadata,
   sessionIdFromMetadata,
   uploadCapturedPdf,
 } from './upload.mjs';
@@ -31,8 +32,22 @@ After a successful capture, tell them it was uploaded and they can hang up.
 If capture fails, ask them to adjust lighting/angle and try once more.
 You are an AI assistant, not a clinician.`;
 
-const greeting =
-  'Greet the caller in one short sentence: say you are Unburden’s document assistant and ask them to hold their document up to the camera, filling the frame.';
+const DEFAULT_GREETING_SAY =
+  'Hi, thanks for calling Unburden. Please hold your document close so the text fills the camera.';
+
+function openingSay(requirementTitle) {
+  if (requirementTitle) {
+    return `Hi, your care provider requests ${requirementTitle}. Please hold your document close so the text fills the camera.`;
+  }
+  return DEFAULT_GREETING_SAY;
+}
+
+function openingRealtimeInstructions(requirementTitle) {
+  if (requirementTitle) {
+    return `Greet the caller in one short sentence: say their care provider requests “${requirementTitle}” and ask them to hold that document up to the camera so the text fills the frame.`;
+  }
+  return 'Greet the caller in one short sentence: say you are Unburden’s document assistant and ask them to hold their document up to the camera, filling the frame.';
+}
 
 const openaiKeyReady = () => {
   const key = process.env.OPENAI_API_KEY || '';
@@ -47,8 +62,9 @@ const agent = defineAgent({
     const jobMetadata = ctx.job?.metadata || '{}';
     const patientId = patientIdFromMetadata(jobMetadata);
     const sessionId = sessionIdFromMetadata(jobMetadata);
+    const requirementTitle = requirementTitleFromMetadata(jobMetadata);
     console.log(
-      `[document-intake] identity=${ctx.room.localParticipant?.identity} patient=${patientId} session=${sessionId || 'none'}`,
+      `[document-intake] identity=${ctx.room.localParticipant?.identity} patient=${patientId} session=${sessionId || 'none'} requirement=${requirementTitle || 'none'}`,
     );
 
     // Chert requires exactly one unmuted agent audio track to accept the participant.
@@ -105,13 +121,19 @@ const agent = defineAgent({
       attachVideo(remoteTrack);
     });
 
+    /** Capture stays locked until the opening greeting has fully finished playing. */
+    let captureAllowed = false;
+
     const say = async text => {
+      speaking = true;
       try {
-        speaking = true;
         const pcm = await synthesizeSpeechPcm16(text);
         await mic.playPcm16(pcm);
+        // Trailing beat so the last words clear FaceTime before the next step.
+        await new Promise(r => setTimeout(r, 600));
       } catch (error) {
         console.warn('[document-intake] speak failed', error);
+        throw error;
       } finally {
         speaking = false;
       }
@@ -134,6 +156,12 @@ const agent = defineAgent({
     };
 
     const captureAndUpload = async () => {
+      if (!captureAllowed) {
+        return {
+          ok: false,
+          message: 'Still greeting the caller — capture is blocked until the greeting finishes.',
+        };
+      }
       if (uploaded) return { ok: true, message: 'Already uploaded a document on this call.' };
       if (!videoFollow) {
         return {
@@ -181,29 +209,38 @@ const agent = defineAgent({
       const stopGreeting = greetWhenFaceTimeReady(ctx.room, () => {
         console.log('[document-intake] FaceTime ready');
         void (async () => {
-          await say(
-            'Hi, this is Unburden’s document assistant. Hold the document close so the text is large and fills most of the camera. Avoid screen glare if you can.',
-          );
-          const hasVideo = await waitForCallerVideo(45_000);
-          if (!hasVideo) {
-            await say('I still cannot see your camera. Please make sure this is a FaceTime Video call and try again.');
-            // Stay on the line — do not hang up on the caller.
-            return;
-          }
-          await say('Perfect, hold still while I capture that.');
-          let result = await captureAndUpload();
-          if (!result.ok) {
-            await say('That was a bit blurry. Hold the document steady and I will try once more.');
-            await new Promise(r => setTimeout(r, 2_000));
-            result = await captureAndUpload();
-          }
-          console.log('[document-intake] capture result', result);
-          if (result.ok) {
-            await say('Got it. I uploaded your document to your chart. You can hang up now.');
-            await new Promise(r => setTimeout(r, 2_000));
-            ctx.shutdown('uploaded');
-          } else {
-            await say('I could not capture a clear document. Please hang up and try ringing again, or upload a PDF in the app.');
+          try {
+            // Let FaceTime media settle so the opening line is actually audible.
+            await new Promise(r => setTimeout(r, 4_500));
+            console.log('[document-intake] speaking greeting (capture locked)');
+            await say(openingSay(requirementTitle));
+            captureAllowed = true;
+            console.log('[document-intake] greeting done — capture unlocked');
+
+            const hasVideo = await waitForCallerVideo(45_000);
+            if (!hasVideo) {
+              await say('Sorry, I can’t see your camera. Please use FaceTime Video and try again.');
+              // Stay on the line — do not hang up on the caller.
+              return;
+            }
+            await say('Great — please hold still while I capture that.');
+            let result = await captureAndUpload();
+            if (!result.ok) {
+              await say('Sorry, that was blurry. Please hold steady and I’ll try once more.');
+              await new Promise(r => setTimeout(r, 2_000));
+              result = await captureAndUpload();
+            }
+            console.log('[document-intake] capture result', result);
+            if (result.ok) {
+              await say('Got it — uploaded to your chart. Thanks! You can hang up now.');
+              await new Promise(r => setTimeout(r, 2_000));
+              ctx.shutdown('uploaded');
+            } else {
+              await say('Sorry, still unclear. Please hang up and ring again, or upload a PDF in the app.');
+            }
+          } catch (error) {
+            console.warn('[document-intake] greeting/capture flow failed', error);
+            captureAllowed = false;
           }
         })();
       });
@@ -276,13 +313,22 @@ const agent = defineAgent({
       outputOptions: { audioEnabled: false, transcriptionEnabled: false },
     });
 
-    const stopGreeting = greetWhenFaceTimeReady(ctx.room, () =>
-      session.generateReply({ instructions: greeting }),
-    );
+    const stopGreeting = greetWhenFaceTimeReady(ctx.room, () => {
+      void (async () => {
+        await new Promise(r => setTimeout(r, 2_500));
+        await session.generateReply({
+          instructions: openingRealtimeInstructions(requirementTitle),
+        });
+        // Rough settle for realtime speech before unlocking capture / auto-capture.
+        await new Promise(r => setTimeout(r, 8_000));
+        captureAllowed = true;
+        console.log('[document-intake] greeting window done — capture unlocked');
+      })();
+    });
     const stopAuto = greetWhenFaceTimeReady(ctx.room, () => {
       void (async () => {
         await new Promise(r => setTimeout(r, 22_000));
-        if (!uploaded) {
+        if (!uploaded && captureAllowed) {
           console.log('[document-intake] auto-capture fallback');
           const result = await captureAndUpload();
           if (result.ok) {

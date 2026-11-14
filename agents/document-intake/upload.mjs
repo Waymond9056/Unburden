@@ -77,3 +77,16 @@ export function sessionIdFromMetadata(raw) {
   }
   return null;
 }
+
+export function requirementTitleFromMetadata(raw) {
+  try {
+    const parsed = JSON.parse(raw || '{}');
+    if (typeof parsed.requirement_title === 'string') {
+      const title = parsed.requirement_title.trim();
+      if (title) return title;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
