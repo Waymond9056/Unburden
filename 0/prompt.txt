@@ -1,0 +1,5 @@
+can we move having a frontend to an earlier milestone, so that i can test newly built features as they come? does that make sense
+
+maybe add a milestone 1.5, and build it out, which is just the frontend, so then i can test intermediate features like document upload as they appear
+
+does this make sense?
