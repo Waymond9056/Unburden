@@ -1,0 +1,47 @@
+is there a way to hide the other guy's face lol. totally understandable if not
+
+---
+
+nah the face is cute
+
+can we make him more polite? is there specific voicelines you can give him
+
+---
+
+concise them all down.
+
+---
+
+this looks incredible. Last task I want to give to you:
+
+this is a bigger milestone, so you might need to start with a plan. be methodical when implementing this checkpoint and make sure nothing breaks. Refer to previous code from this branch if needed, because that worked really well for Chert
+
+So we can ring the user from the patient side. I want to be able to ring the user from the care provider view as well. in each of these sections, the careprovider view should have a button called "request documentation"
+
+when this button is clicked, the agent will ring the user, just like before, and the only difference is that at the start it should use as the greeting. "Hi, your careprovider requests [DOCUMENT TYPE REQUIRED]. Please hold your docuemnt close so the text fills the camera". And document text required should just be "Documented severe asthma diagnosis", etc. whatever that specific title is. so technically the agent should have different voicelines depeneding on which button is clicked. does that make sense
+
+After that, the document should be uploaded in the exact same manner as before
+
+---
+
+build it cloud or build local?
+
+---
+
+execute now
+
+---
+
+{"detail":"Timed out waiting for document-intake to join LiveKit with an unmuted audio track. Seen: none. Restart `npm start` in agents/document-intake."}
+
+---
+
+how did this happen? how was there a stale agnet and how can i make sure this doesn't happen again
+
+---
+
+he wasn't very polite. all he said was "great, please hold still while i capture that." i think it started capturing immediately. can we make sure it finishes the greeting first before any secondary logic, and during the greeting it blocks capturing? thanks
+
+---
+
+can you add another 2 seconds of extra settle time maybe? the first part of the greeting was still cut off

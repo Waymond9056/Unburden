@@ -1,0 +1,55 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7E67QVBQNJTGYRX2PMNZ93D",
+  "session_id": "d4eb60e1-dc4d-436e-be13-6070426c2b69",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T23:28:15.640785Z",
+  "branch": "chert",
+  "checkpoints_count": 10,
+  "save_step_count": 9,
+  "files_touched": [
+    "agents/document-intake/agent.mjs",
+    "agents/document-intake/greet.mjs",
+    "agents/document-intake/upload.mjs",
+    "backend/app/api/chert.py",
+    "backend/app/services/chert_calls.py",
+    "data/seed/exacerbation_er_note.pdf",
+    "data/seed/medication_history.pdf",
+    "data/seed/pulmonary_consult_note.pdf",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/RequirementsChecklist.tsx",
+    "frontend/src/lib/api.ts"
+  ],
+  "agent": "Cursor",
+  "model": "default",
+  "turn_id": "509395feb8ae",
+  "checkpoint_transcript_start": 205,
+  "transcript_lines_at_start": 205,
+  "compact_transcript_start": 64,
+  "token_usage": {
+    "input_tokens": 152913,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3218304,
+    "output_tokens": 24810,
+    "api_call_count": 10
+  },
+  "redaction": {
+    "replacements": 37,
+    "layers": {
+      "betterleaks": 14,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 30,
+      "credentialed_uri": 0,
+      "entropy": 13,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 34,
+    "context_tokens": 232021,
+    "context_window_size": 256000
+  }
+}
