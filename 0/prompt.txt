@@ -1,0 +1,5 @@
+Look through and understand MVP.md. Raise any questions or concerns if you have any. 
+
+we're building a hackathon project. Once you're ready, start with Milestone 1
+
+if you have any design uncertainties, consult me and i'll approve them
