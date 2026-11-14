@@ -28,7 +28,7 @@ export function PatientUploadView({
   }
 
   return (
-    <div className="relative z-10 mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col justify-center px-5 py-16 sm:px-8">
+    <div className="mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col justify-center px-5 py-16 sm:px-8">
       <p className="max-w-xl text-lg leading-7 text-ink-soft">
         Upload medical PDFs for your care team. Your clinician reviews them in
         the care provider workspace.
@@ -42,7 +42,7 @@ export function PatientUploadView({
         </p>
 
         <label
-          className={`mt-6 inline-flex cursor-pointer border border-accent bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-deep ${
+          className={`relative mt-6 inline-flex cursor-pointer border border-accent bg-accent px-5 py-3 text-sm font-medium text-white hover:bg-accent-deep focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 focus-within:ring-offset-paper ${
             uploading ? "uploading-pulse pointer-events-none opacity-70" : ""
           }`}
         >

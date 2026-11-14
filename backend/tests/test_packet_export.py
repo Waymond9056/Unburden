@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pymupdf
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -55,5 +56,8 @@ def test_export_attaches_selected_source_pdfs(tmp_path: Path) -> None:
     assert filename.endswith(".pdf")
     assert "Raymond" in filename or PATIENT_ID in filename
     assert pdf_bytes.startswith(b"%PDF")
-    # Cover + dividers + multiple source pages should be clearly larger than a single seed PDF.
-    assert len(pdf_bytes) > 8_000
+    packet = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+    # Cover, a divider, and the supporting medication-history PDF.
+    assert packet.page_count >= 3
+    text = "\n".join(page.get_text() for page in packet)
+    assert "Pharmacy Medication History" in text

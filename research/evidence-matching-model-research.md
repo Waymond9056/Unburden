@@ -37,9 +37,9 @@ Source: `backend/app/services/policy.py`, `evidence_retrieval.py`,
   dependency tree if we want CPU-optimized inference later.
 - **`EvidenceCandidate.relevance_score`** (float) and `verification_status`
   (string) already exist in the DB/schema (`backend/app/models/schemas.py`) and
-  are barely used today (ordering only; not shown as a % in the UI yet —
-  `frontend/src/components/EvidenceCandidates.tsx` renders status badges, not
-  scores). This is a ready-made integration point for a calibrated confidence
+  are shown on the requirements checklist
+  (`frontend/src/components/RequirementsChecklist.tsx`), including an NLI match
+  percentage. This is a ready-made integration point for a calibrated confidence
   score.
 - **MVP.md's explicit design constraint** (section 4.3): "An LLM may propose
   evidence matches, but structured policy constraints and source verification

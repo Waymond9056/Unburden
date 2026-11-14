@@ -229,7 +229,8 @@ function RequirementBlock({
                         Set status
                       </span>
                       <select
-                        className="border border-current/30 bg-white/70 px-2 py-1 text-xs text-ink"
+                        aria-label={`Set status for page ${candidate.source_page}`}
+                        className="border border-current/30 bg-white/70 px-2 py-1 text-xs capitalize text-ink focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                         value={colorStatus}
                         onChange={(event) => {
                           void onUpdateCandidateStatus(
@@ -241,7 +242,7 @@ function RequirementBlock({
                       >
                         {STATUS_OPTIONS.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {option.replaceAll("_", " ")}
                           </option>
                         ))}
                       </select>
