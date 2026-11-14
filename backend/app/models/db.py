@@ -30,7 +30,7 @@ class Document(Base):
     patient_id: Mapped[str] = mapped_column(ForeignKey("patients.id", ondelete="CASCADE"), index=True)
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(512), nullable=False)
-    document_type: Mapped[str] = mapped_column(String(128), default="clinical_note")
+    document_type: Mapped[str] = mapped_column(String(128), default="")
     storage_path: Mapped[str] = mapped_column(String(1024), nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, default=0)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -42,11 +42,12 @@ export function documentFileUrl(patientId: string, documentId: string) {
 export async function uploadDocument(
   patientId: string,
   file: File,
-  documentType = "clinical_note",
+  documentType?: string,
 ) {
   const body = new FormData();
   body.append("file", file);
-  body.append("document_type", documentType);
+  const trimmedType = documentType?.trim();
+  if (trimmedType) body.append("document_type", trimmedType);
   body.append("source_label", file.name);
   return request<DocumentSummary>(`/api/patients/${patientId}/documents`, {
     method: "POST",

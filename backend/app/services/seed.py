@@ -205,7 +205,7 @@ def seed_database(db: Session, *, regenerate_pdfs: bool = True) -> list[str]:
         {
             "filename": p.name,
             "path": p,
-            "document_type": "clinical_note",
+            "document_type": "",
             "source_label": p.stem,
             "scenario_tag": None,
         }
@@ -219,7 +219,7 @@ def seed_database(db: Session, *, regenerate_pdfs: bool = True) -> list[str]:
             patient_id=PATIENT_ID,
             source_path=Path(spec["path"]),
             original_filename=spec["filename"],
-            document_type=spec.get("document_type", "clinical_note"),
+            document_type=spec.get("document_type") or "",
             source_label=spec.get("source_label"),
             scenario_tag=spec.get("scenario_tag"),
         )

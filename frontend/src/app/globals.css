@@ -8,7 +8,8 @@
   --accent: #1b7a6d;
   --accent-deep: #0f5a51;
   --line: #c7d4d7;
-  --muted: #5d7277;
+  /* #465c61 is about 6.6:1 on --paper and 5.7:1 on the previous mint wash. */
+  --muted: #465c61;
   --warning: #8a6230;
   --background: var(--paper);
   --foreground: var(--ink);
@@ -31,46 +32,10 @@
 }
 
 body {
-  background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #d7ebe7 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #dce6ea 0%, transparent 50%),
-    linear-gradient(165deg, #eef4f5 0%, var(--paper) 45%, #e8f0f1 100%);
+  background: var(--paper);
   color: var(--foreground);
   font-family: var(--font-figtree), sans-serif;
   min-height: 100vh;
-}
-
-body::before {
-  content: "";
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(16, 42, 46, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 42, 46, 0.03) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 85%);
-  z-index: 0;
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 @keyframes pulse-soft {
@@ -81,27 +46,6 @@ body::before {
   50% {
     opacity: 1;
   }
-}
-
-.animate-rise {
-  animation: rise-in 0.55s ease-out both;
-}
-
-.animate-fade {
-  animation: fade-in 0.4s ease-out both;
-}
-
-.stagger-1 {
-  animation-delay: 0.05s;
-}
-.stagger-2 {
-  animation-delay: 0.12s;
-}
-.stagger-3 {
-  animation-delay: 0.2s;
-}
-.stagger-4 {
-  animation-delay: 0.28s;
 }
 
 .uploading-pulse {

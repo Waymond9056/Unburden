@@ -67,3 +67,21 @@ def test_upload_and_list_documents(tmp_path: Path) -> None:
     assert file_response.status_code == 200
     assert file_response.headers["content-type"].startswith("application/pdf")
     assert file_response.content[:4] == b"%PDF"
+
+
+def test_upload_without_document_type_is_blank(tmp_path: Path) -> None:
+    db = TestingSessionLocal()
+    ensure_seed_patient(db)
+    db.close()
+
+    specs = generate_seed_pdfs(tmp_path)
+    lab = next(s for s in specs if s["filename"] == "lab_eosinophils.pdf")
+
+    with lab["path"].open("rb") as f:
+        response = client.post(
+            f"/api/patients/{PATIENT_ID}/documents",
+            files={"file": ("lab_eosinophils.pdf", f, "application/pdf")},
+        )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["document_type"] == ""
