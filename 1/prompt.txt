@@ -1,0 +1,178 @@
+so does our model give a % confidence/probability that our document supports a claim?
+
+---
+
+i think that probability should be shown displayed in the insurance requirements next to each document
+
+---
+
+wait so rn the 3 options are accept needs review and what
+
+---
+
+what were the TREC cutoff statuses
+
+---
+
+standardize everything Support, insufficient, and contradiction for TREC, document citation, and requirement level, and parallelize everything.
+
+---
+
+Start multitasking
+
+---
+
+by default, the color (red, yellow green) should reflect the prediction the model makes based on percentage cutoffs. and on reload they should be like this as well just for the sake of the demo
+
+but the idea is that on the careprovider view, they can manually go in and change a document's status after verifying the status themself
+
+---
+
+remove this part rq "Found 2 supporting source-backed candidate(s) meeting policy constraints."
+
+---
+
+the entire page reloads for like 5 seconds on start and on switch when i change the status. can we fix
+
+---
+
+"No candidate fully established the requirement; at least one passage is insufficient and needs clinician review." remove this part too
+
+---
+
+when i make a document into contradiction it just disappears. keep it there
+
+---
+
+wait what does the % represent. bc there's actually 3 percentages; contraidciton; insufficient, and support
+
+---
+
+uh also when i switch between contradiction, support, etc. dont make them move around
+
+---
+
+in the evidence packet, rather than generating the packet for me, give me the option to choose between all documents that are supported for that condition. updating status in the requirements tab should add/remove them from here
+
+---
+
+actually wait the documents should be sorted by % match under each condition
+
+---
+
+selecting/deselecting one document affects it in multiple conditions. these should be mutually exclusive selections
+
+---
+
+"Done. Under each requirement, support docs are sorted by % match (highest first), using the same score as the requirements tab." this did not happen
+
+---
+
+remove the part that says % match to the right of this
+
+---
+
+remove the html that says this part
+
+---
+
+how is this calculated? what derermines what this part says
+
+---
+
+remove these two parts only to the right of the part taht says aether helth
+
+---
+
+```chat_selection
+agent_id: a97108b8-46c1-4e0d-ad7f-ea7a23fcd32c
+selected_text:
+It’s set by rolling up the citation statuses for that requirement:
+
+support — at least min_support_candidates citations are support (usually 1)
+else insufficient — at least one citation is insufficient
+else contradiction — everything else is contradiction / missing
+```
+ 
+
+lets so simpler logic
+
+if there is at least one CONTRADICTION or no SUPPORT status, it should say "NEEDS REVIEW". Otherwise, it says "APPROVED"
+
+---
+
+remove the part to the right that says approved or needs review
+
+
+
+only do this for the evidence packet tab
+
+---
+
+logic isn't right. the second section should be approved bc none are contradicotry
+
+---
+
+remove the part that says any suggested docuemtnation
+
+---
+
+needs review should be gray. and instead of approved, say ready
+
+---
+
+for the demo just remove this section 
+
+so like for the AETHER health requirement, we dont need recently treated stuf
+
+---
+
+failed to fetch?
+
+---
+
+permanently remove this document and dont appear it on refresh
+
+---
+
+wait actually bring it back sorry
+
+---
+
+remove the allergy clinic note
+
+---
+
+remove the duplicate consult summary
+
+---
+
+give me a dropdown that can let me choose between insurances. it should be on this tab
+
+---
+
+for the other insurance, make it really simple. Call it "simple asthma insurance" and it only requires "Documented severe asthma diagnosis"
+
+---
+
+remove the lab report document permannetly
+
+---
+
+the dropdown doesn't look right. its too far to the rigt
+
+---
+
+no wait revert that. i meant like the little triangle part that points down is too far right
+
+---
+
+should still be a little more closer to the left
+
+---
+
+dude. just make the triangle sit a little more to the left relative to the box
+
+---
+
+remove this still needed sectino in the evidence packet
