@@ -1,0 +1,61 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7DPAXA0BSWWSFEKVNAA4EHJ",
+  "session_id": "0948605c-c4a1-47e2-b7b2-5c714baa3c79",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T18:50:22.20658Z",
+  "branch": "deberta",
+  "checkpoints_count": 11,
+  "save_step_count": 11,
+  "files_touched": [
+    ".gitignore",
+    "README.md",
+    "backend/app/api/patients.py",
+    "backend/app/models/schemas.py",
+    "backend/app/services/documents.py",
+    "backend/app/services/nli_deberta.py",
+    "backend/benchmarks/nli_support_benchmark.json",
+    "backend/requirements-ml.txt",
+    "backend/scripts/benchmark_nli.py",
+    "backend/tests/test_nli_deberta.py",
+    "data/seed/duplicate_consult_summary.pdf",
+    "data/seed/exacerbation_er_note.pdf",
+    "data/seed/lab_eosinophils.pdf",
+    "data/seed/medication_history.pdf",
+    "data/seed/misleading_allergy_note.pdf",
+    "data/seed/pulmonary_consult_note.pdf",
+    "frontend/src/app/page.tsx",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/DocumentLibrary.tsx",
+    "frontend/src/lib/api.ts",
+    "research/evidence-matching-model-research.md"
+  ],
+  "agent": "Cursor",
+  "model": "default",
+  "turn_id": "5b9772d8d498",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 102951,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2852864,
+    "output_tokens": 28185,
+    "api_call_count": 11
+  },
+  "redaction": {
+    "replacements": 0,
+    "layers": {
+      "betterleaks": 0,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 0,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 11
+  }
+}
