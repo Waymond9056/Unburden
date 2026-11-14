@@ -1,6 +1,6 @@
 {
   "id": "fictional-severe-asthma-policy",
-  "name": "Aether Health — Severe Asthma Prior Authorization (FICTIONAL)",
+  "name": "Aether Health — Severe Asthma PA",
   "disclaimer": "",
   "logic": "AND",
   "as_of_date": "2025-11-01",
@@ -17,7 +17,7 @@
       "ambiguous_if_quote_matches_any": ["possible asthma", "suspected asthma"],
       "temporal": null,
       "numeric": null,
-      "min_accepted_candidates": 1,
+      "min_support_candidates": 1,
       "suggested_document_types": ["pulmonary consult note", "problem list / diagnosis documentation"]
     },
     {
@@ -47,7 +47,7 @@
       },
       "numeric": null,
       "require_interval_days_min": 90,
-      "min_accepted_candidates": 1,
+      "min_support_candidates": 1,
       "suggested_document_types": ["pharmacy fill history", "medication list with dates"]
     },
     {
@@ -72,31 +72,8 @@
         "min_value": 300,
         "unit_substring": "cells"
       },
-      "min_accepted_candidates": 1,
+      "min_support_candidates": 1,
       "suggested_document_types": ["CBC with differential / absolute eosinophil count report"]
-    },
-    {
-      "id": "recent_exacerbation_history",
-      "title": "Recent treated asthma exacerbation",
-      "description": "At least one asthma exacerbation treated with systemic corticosteroids or emergency care within 12 months.",
-      "retrieval_terms": [
-        "exacerbation",
-        "systemic corticosteroid",
-        "prednisone burst",
-        "emergency department"
-      ],
-      "detail_fields": ["dates", "matched_terms"],
-      "acceptable_document_types": ["hospital_note", "clinical_note", "medication_record"],
-      "must_match_any": ["exacerbation", "prednisone burst", "emergency department"],
-      "reject_if_quote_matches_any": ["no systemic corticosteroid exacerbation"],
-      "ambiguous_if_quote_matches_any": ["possible exacerbation"],
-      "temporal": {
-        "within_months": 12,
-        "date_required": true
-      },
-      "numeric": null,
-      "min_accepted_candidates": 1,
-      "suggested_document_types": ["ED visit summary", "hospital discharge note", "steroid burst prescription record"]
     }
   ]
 }

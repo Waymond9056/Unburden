@@ -26,6 +26,19 @@ export type DocumentDetail = DocumentSummary & {
   pages: PageText[];
 };
 
+export type CandidateStatus = "support" | "insufficient" | "contradiction";
+
+export type CandidateNli = {
+  support_probability: number;
+  support: number;
+  insufficient: number;
+  contradiction: number;
+  predicted_label: string;
+  model_name: string;
+  entailment?: number | null;
+  neutral?: number | null;
+};
+
 export type EvidenceCandidate = {
   id: string;
   patient_id: string;
@@ -42,6 +55,10 @@ export type EvidenceCandidate = {
   created_at: string;
   source_document_name: string | null;
   source_document_type: string | null;
+  nli?: CandidateNli | null;
+  display_status?: string;
+  model_status?: string | null;
+  clinician_override?: string | null;
 };
 
 export type RequirementEvaluation = {
@@ -50,11 +67,26 @@ export type RequirementEvaluation = {
   status: string;
   explanation: string;
   suggested_document_types: string[];
-  accepted_candidate_ids: string[];
-  review_candidate_ids: string[];
-  rejected_candidate_ids: string[];
-  supporting_candidates: EvidenceCandidate[];
-  review_candidates: EvidenceCandidate[];
+  support_candidate_ids: string[];
+  insufficient_candidate_ids: string[];
+  contradiction_candidate_ids: string[];
+  support_candidates: EvidenceCandidate[];
+  insufficient_candidates: EvidenceCandidate[];
+  contradiction_candidates?: EvidenceCandidate[];
+  // Legacy aliases still returned by API.
+  accepted_candidate_ids?: string[];
+  review_candidate_ids?: string[];
+  rejected_candidate_ids?: string[];
+  supporting_candidates?: EvidenceCandidate[];
+  review_candidates?: EvidenceCandidate[];
+};
+
+export type PolicySummary = {
+  id: string;
+  name: string;
+  disclaimer: string;
+  logic: string;
+  as_of_date: string;
 };
 
 export type PolicyEvaluation = {

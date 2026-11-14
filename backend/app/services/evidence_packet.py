@@ -14,14 +14,16 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.db import Document, EvidenceCandidate
 from app.services.evidence_verification import (
-    CANDIDATE_ACCEPTED,
-    STATUS_NEEDS_REVIEW,
-    STATUS_NOT_ESTABLISHED,
-    STATUS_SUPPORTED,
     PolicyEvaluation,
+    display_status_for_candidate,
     evaluate_patient_policy,
 )
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID, RequirementDefinition
+from app.services.status_vocab import (
+    CANDIDATE_SUPPORT,
+    REQUIREMENT_READY,
+    REQUIREMENT_NEEDS_REVIEW,
+)
 
 # Source-reliability prior by document type. Used only after verification accepts
 # a candidate — never to override Milestone 3 correctness.
@@ -111,15 +113,15 @@ def _edge_strength(
 
 def _missing_explanation(requirement_id: str, status: str) -> str:
     requirement = REQUIREMENTS_BY_ID[requirement_id]
-    if status == STATUS_NOT_ESTABLISHED:
+    if status == REQUIREMENT_NEEDS_REVIEW:
         return (
             f"{requirement.title} is required by this example policy, but no qualifying "
             "source-backed evidence was established in the uploaded documents. "
             "This does not mean the patient clinically fails the criterion."
         )
     return (
-        f"{requirement.title} has candidate material that still needs clinician review "
-        "before it can be treated as established for the packet."
+        f"{requirement.title} has candidate material that is still insufficient and needs "
+        "clinician review before it can be treated as established for the packet."
     )
 
 
@@ -131,15 +133,15 @@ def _verified_edges(
     supported_ids = {
         item.requirement_id
         for item in evaluation.requirements
-        if item.status == STATUS_SUPPORTED
+        if item.status == REQUIREMENT_READY
     }
-    accepted_ids = {
+    support_ids = {
         candidate_id
         for item in evaluation.requirements
-        if item.status == STATUS_SUPPORTED
-        for candidate_id in item.accepted_candidate_ids
+        if item.status == REQUIREMENT_READY
+        for candidate_id in item.support_candidate_ids
     }
-    if not supported_ids or not accepted_ids:
+    if not supported_ids or not support_ids:
         return []
 
     candidates = (
@@ -147,15 +149,14 @@ def _verified_edges(
         .options(joinedload(EvidenceCandidate.document))
         .filter(
             EvidenceCandidate.patient_id == patient_id,
-            EvidenceCandidate.policy_id == evaluation.policy_id,
-            EvidenceCandidate.id.in_(accepted_ids),
+            EvidenceCandidate.id.in_(support_ids),
         )
         .all()
     )
 
     edges: list[_Edge] = []
     for candidate in candidates:
-        if candidate.verification_status != CANDIDATE_ACCEPTED:
+        if candidate.verification_status != CANDIDATE_SUPPORT:
             continue
         if candidate.requirement_id not in supported_ids:
             continue
@@ -221,7 +222,7 @@ def _exact_best_packet(
     """Exact search over document subsets for small corpora.
 
     Objective (in order):
-    1. Cover every Milestone-3 SUPPORTED requirement
+    1. Cover every READY requirement
     2. Maximize evidence strength / source fit
     3. Minimize document count, then page count
     """
@@ -264,7 +265,7 @@ def build_evidence_packet(
     supported = {
         item.requirement_id
         for item in evaluation.requirements
-        if item.status == STATUS_SUPPORTED
+        if item.status == REQUIREMENT_READY
     }
     edges = _verified_edges(db, patient_id, evaluation)
     coverage: dict[str, set[str]] = {}
@@ -317,7 +318,7 @@ def build_evidence_packet(
 
     missing: list[MissingEvidenceItem] = []
     for item in evaluation.requirements:
-        if item.status == STATUS_NOT_ESTABLISHED:
+        if item.status == REQUIREMENT_NEEDS_REVIEW:
             missing.append(
                 MissingEvidenceItem(
                     requirement_id=item.requirement_id,
@@ -327,7 +328,7 @@ def build_evidence_packet(
                     suggested_document_types=tuple(item.suggested_document_types),
                 )
             )
-        elif item.status == STATUS_NEEDS_REVIEW and not item.accepted_candidate_ids:
+        elif item.status == REQUIREMENT_NEEDS_REVIEW and not item.support_candidate_ids:
             missing.append(
                 MissingEvidenceItem(
                     requirement_id=item.requirement_id,
@@ -344,7 +345,7 @@ def build_evidence_packet(
     )
 
     notes = [
-        "Packet includes only Milestone-3 accepted, source-verified evidence.",
+        "Packet includes only Milestone-3 support, source-verified evidence.",
         "Selection maximizes evidence strength and source fit; page/document count is a secondary tie-breaker.",
         "This is a review packet for a clinician — not an insurer submission and not coverage approval.",
         evaluation.disclaimer,
@@ -366,4 +367,107 @@ def build_evidence_packet(
         packet_strength=round(packet_strength, 3),
         missing_evidence=tuple(missing),
         notes=tuple(notes),
+    )
+
+
+def build_packet_from_document_ids(
+    db: Session,
+    patient_id: str,
+    document_ids: list[str],
+    *,
+    policy_id: str = FICTIONAL_POLICY_ID,
+    evaluation: PolicyEvaluation | None = None,
+) -> EvidencePacket:
+    """Build a packet from clinician-selected document IDs (no auto-optimizer)."""
+    evaluation = evaluation or evaluate_patient_policy(
+        db, patient_id, policy_id=policy_id, persist=True, force_nli=False
+    )
+    selected_order = [doc_id for doc_id in document_ids if doc_id]
+    selected_set = set(selected_order)
+
+    documents = {
+        doc.id: doc
+        for doc in db.query(Document).filter(Document.patient_id == patient_id).all()
+    }
+    requirement_ids = [item.requirement_id for item in evaluation.requirements]
+    candidates = (
+        db.query(EvidenceCandidate)
+        .options(joinedload(EvidenceCandidate.document))
+        .filter(
+            EvidenceCandidate.patient_id == patient_id,
+            EvidenceCandidate.requirement_id.in_(requirement_ids or [""]),
+        )
+        .all()
+    )
+
+    coverage: dict[str, set[str]] = {}
+    for candidate in candidates:
+        if display_status_for_candidate(candidate) != CANDIDATE_SUPPORT:
+            continue
+        coverage.setdefault(candidate.document_id, set()).add(candidate.requirement_id)
+
+    selected_docs: list[PacketDocument] = []
+    covered_by_packet: set[str] = set()
+    for doc_id in selected_order:
+        doc = documents.get(doc_id)
+        if doc is None:
+            continue
+        req_ids = tuple(sorted(coverage.get(doc_id, set())))
+        covered_by_packet.update(req_ids)
+        selected_docs.append(
+            PacketDocument(
+                document_id=doc.id,
+                source_label=doc.source_label or doc.original_filename,
+                original_filename=doc.original_filename,
+                document_type=doc.document_type,
+                page_count=doc.page_count,
+                covers_requirement_ids=req_ids,
+                covers_requirement_titles=tuple(
+                    REQUIREMENTS_BY_ID[req_id].title
+                    for req_id in req_ids
+                    if req_id in REQUIREMENTS_BY_ID
+                ),
+                strength_score=1.0,
+            )
+        )
+
+    missing: list[MissingEvidenceItem] = []
+    for item in evaluation.requirements:
+        has_support = any(
+            display_status_for_candidate(candidate) == CANDIDATE_SUPPORT
+            and candidate.requirement_id == item.requirement_id
+            for candidate in candidates
+        )
+        if has_support:
+            continue
+        missing.append(
+            MissingEvidenceItem(
+                requirement_id=item.requirement_id,
+                title=item.title,
+                status=item.status,
+                explanation=_missing_explanation(item.requirement_id, item.status),
+                suggested_document_types=tuple(item.suggested_document_types),
+            )
+        )
+
+    notes = (
+        "Packet documents were chosen by the clinician from support-status citations.",
+        "This is a review packet for a clinician — not an insurer submission and not coverage approval.",
+        evaluation.disclaimer,
+    )
+
+    return EvidencePacket(
+        patient_id=patient_id,
+        policy_id=evaluation.policy_id,
+        policy_name=evaluation.policy_name,
+        disclaimer=evaluation.disclaimer,
+        covered_requirement_ids=tuple(sorted(covered_by_packet)),
+        selected_documents=tuple(selected_docs),
+        omitted_document_ids=tuple(
+            sorted(doc_id for doc_id in coverage if doc_id not in selected_set)
+        ),
+        total_pages=sum(doc.page_count for doc in selected_docs),
+        packet_strength=float(len(selected_docs)),
+        missing_evidence=tuple(missing),
+        notes=notes,
     )

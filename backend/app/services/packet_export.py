@@ -16,7 +16,11 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy.orm import Session
 
 from app.models.db import Document, Patient
-from app.services.evidence_packet import EvidencePacket, build_evidence_packet
+from app.services.evidence_packet import (
+    EvidencePacket,
+    build_evidence_packet,
+    build_packet_from_document_ids,
+)
 from app.services.policy import FICTIONAL_POLICY_ID
 
 
@@ -124,13 +128,19 @@ def export_evidence_packet_pdf(
     patient_id: str,
     *,
     policy_id: str = FICTIONAL_POLICY_ID,
+    document_ids: list[str] | None = None,
 ) -> tuple[bytes, str]:
     """Return (pdf_bytes, filename) for the submission-ready evidence packet."""
     patient = db.get(Patient, patient_id)
     if patient is None:
         raise ValueError(f"Patient not found: {patient_id}")
 
-    packet = build_evidence_packet(db, patient_id, policy_id=policy_id)
+    if document_ids is not None:
+        packet = build_packet_from_document_ids(
+            db, patient_id, document_ids, policy_id=policy_id
+        )
+    else:
+        packet = build_evidence_packet(db, patient_id, policy_id=policy_id)
     cover_bytes = _cover_pdf_bytes(patient, packet)
 
     merged = pymupdf.open()

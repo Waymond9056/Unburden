@@ -1,0 +1,24 @@
+{
+  "id": "simple-asthma-insurance",
+  "name": "Simple asthma insurance",
+  "disclaimer": "",
+  "logic": "AND",
+  "as_of_date": "2025-11-01",
+  "requirements": [
+    {
+      "id": "documented_severe_asthma",
+      "title": "Documented severe asthma diagnosis",
+      "description": "Records must document severe persistent asthma (or equivalent coded diagnosis).",
+      "retrieval_terms": ["severe persistent asthma", "severe asthma", "J45.50"],
+      "detail_fields": ["dates", "matched_terms"],
+      "acceptable_document_types": ["clinical_note", "hospital_note"],
+      "must_match_any": ["severe persistent asthma", "J45.50"],
+      "reject_if_quote_matches_any": [],
+      "ambiguous_if_quote_matches_any": ["possible asthma", "suspected asthma"],
+      "temporal": null,
+      "numeric": null,
+      "min_support_candidates": 1,
+      "suggested_document_types": ["pulmonary consult note", "problem list / diagnosis documentation"]
+    }
+  ]
+}

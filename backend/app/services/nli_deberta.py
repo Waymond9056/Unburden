@@ -16,14 +16,26 @@ from pathlib import Path
 from typing import Any
 
 from app.services.policy import RequirementDefinition
+from app.services.status_vocab import (
+    NLI_MODEL_TO_STATUS,
+    STATUS_CONTRADICTION,
+    STATUS_INSUFFICIENT,
+    STATUS_SUPPORT,
+    STATUSES,
+)
 
 DEFAULT_MODEL_NAME = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
 BIOMED_MODEL_NAME = "pritamdeka/PubMedBERT-MNLI-MedNLI"
 
-LABEL_ENTAILMENT = "entailment"
-LABEL_NEUTRAL = "neutral"
-LABEL_CONTRADICTION = "contradiction"
-NLI_LABELS = (LABEL_ENTAILMENT, LABEL_NEUTRAL, LABEL_CONTRADICTION)
+# Canonical Unburden labels (parallel with citation + requirement statuses).
+LABEL_SUPPORT = STATUS_SUPPORT
+LABEL_INSUFFICIENT = STATUS_INSUFFICIENT
+LABEL_CONTRADICTION = STATUS_CONTRADICTION
+NLI_LABELS = STATUSES
+
+# Legacy aliases used by older tests / scripts.
+LABEL_ENTAILMENT = LABEL_SUPPORT
+LABEL_NEUTRAL = LABEL_INSUFFICIENT
 
 _MODEL_LOCK = threading.Lock()
 _MODEL_CACHE: dict[str, tuple[Any, Any]] = {}
@@ -37,19 +49,30 @@ class NliDependenciesMissing(RuntimeError):
 class NliScore:
     premise: str
     hypothesis: str
-    entailment: float
-    neutral: float
+    support: float
+    insufficient: float
     contradiction: float
     predicted_label: str
     model_name: str
+
+    # Legacy probability aliases (model-native names).
+    @property
+    def entailment(self) -> float:
+        return self.support
+
+    @property
+    def neutral(self) -> float:
+        return self.insufficient
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "premise": self.premise,
             "hypothesis": self.hypothesis,
-            "entailment": self.entailment,
-            "neutral": self.neutral,
+            "support": self.support,
+            "insufficient": self.insufficient,
             "contradiction": self.contradiction,
+            "entailment": self.support,
+            "neutral": self.insufficient,
             "predicted_label": self.predicted_label,
             "model_name": self.model_name,
         }
@@ -165,13 +188,11 @@ def _ensure_model(model_name: str = DEFAULT_MODEL_NAME) -> tuple[Any, Any]:
 
 def _normalize_label(raw: str) -> str:
     label = raw.lower().strip()
-    aliases = {
-        "entailment": LABEL_ENTAILMENT,
-        "neutral": LABEL_NEUTRAL,
-        "contradiction": LABEL_CONTRADICTION,
-        "contradictory": LABEL_CONTRADICTION,
-    }
-    return aliases.get(label, label)
+    if label in NLI_MODEL_TO_STATUS:
+        return NLI_MODEL_TO_STATUS[label]
+    if label in STATUSES:
+        return label
+    return label
 
 
 def score_passage(
@@ -199,7 +220,11 @@ def score_passage(
         probs = torch.softmax(logits, dim=-1)
 
     id2label = {int(k): str(v) for k, v in model.config.id2label.items()}
-    score_map = {LABEL_ENTAILMENT: 0.0, LABEL_NEUTRAL: 0.0, LABEL_CONTRADICTION: 0.0}
+    score_map = {
+        LABEL_SUPPORT: 0.0,
+        LABEL_INSUFFICIENT: 0.0,
+        LABEL_CONTRADICTION: 0.0,
+    }
     for index, probability in enumerate(probs.tolist()):
         label = _normalize_label(id2label.get(index, str(index)))
         if label in score_map:
@@ -209,8 +234,8 @@ def score_passage(
     return NliScore(
         premise=passage,
         hypothesis=hypothesis,
-        entailment=score_map[LABEL_ENTAILMENT],
-        neutral=score_map[LABEL_NEUTRAL],
+        support=score_map[LABEL_SUPPORT],
+        insufficient=score_map[LABEL_INSUFFICIENT],
         contradiction=score_map[LABEL_CONTRADICTION],
         predicted_label=predicted,
         model_name=model_name,

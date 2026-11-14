@@ -9,9 +9,10 @@ from app.core.database import Base
 from app.models.db import Document, DocumentPage, EvidenceCandidate, Patient
 from app.services.evidence_retrieval import retrieve_for_document
 from app.services.evidence_verification import (
+    STATUS_READY,
     STATUS_NEEDS_REVIEW,
-    STATUS_NOT_ESTABLISHED,
-    STATUS_SUPPORTED,
+    CandidateVerdict,
+    _requirement_status,
     evaluate_patient_policy,
     verify_candidate,
 )
@@ -32,14 +33,21 @@ def _memory_session():
 
 def test_policy_loads_fictional_constraints() -> None:
     policy = load_policy()
-    assert "FICTIONAL" in policy.disclaimer.upper() or "fictional" in policy.name.lower()
+    assert policy.id == "fictional-severe-asthma-policy"
+    assert "Aether Health" in policy.name
     assert policy.logic == "AND"
-    assert len(policy.requirements) == 4
+    assert len(policy.requirements) == 3
+    assert "recent_exacerbation_history" not in REQUIREMENTS_BY_ID
     lab = REQUIREMENTS_BY_ID["qualifying_eosinophil_result"]
     assert lab.numeric is not None
     assert lab.numeric.min_value == 300
     assert lab.temporal is not None
     assert lab.temporal.within_months == 12
+
+    simple = load_policy("simple-asthma-insurance")
+    assert simple.name == "Simple asthma insurance"
+    assert len(simple.requirements) == 1
+    assert simple.requirements[0].id == "documented_severe_asthma"
 
 
 def test_quote_must_exist_in_source_page() -> None:
@@ -80,7 +88,7 @@ def test_quote_must_exist_in_source_page() -> None:
         REQUIREMENTS_BY_ID["documented_severe_asthma"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "rejected"
+    assert verdict.status == "contradiction"
     assert "not found" in verdict.reasons[0].lower()
 
 
@@ -123,7 +131,7 @@ def test_temporal_and_numeric_lab_rules() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert ok.status == "accepted"
+    assert ok.status == "support"
 
     stale = EvidenceCandidate(
         id="c-old",
@@ -157,7 +165,7 @@ def test_temporal_and_numeric_lab_rules() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert old.status == "rejected"
+    assert old.status == "contradiction"
 
 
 def test_and_or_requirement_rollups() -> None:
@@ -166,10 +174,33 @@ def test_and_or_requirement_rollups() -> None:
     db.add(patient)
     db.commit()
 
-    # No candidates → all NOT_ESTABLISHED under AND
+    # No candidates → all NEEDS_REVIEW under AND
     empty = evaluate_patient_policy(db, "p-and", persist=False)
-    assert empty.overall_status == STATUS_NOT_ESTABLISHED
-    assert all(item.status == STATUS_NOT_ESTABLISHED for item in empty.requirements)
+    assert empty.overall_status == STATUS_NEEDS_REVIEW
+    assert all(item.status == STATUS_NEEDS_REVIEW for item in empty.requirements)
+
+
+def test_requirement_rollup_approved_with_support_and_insufficient() -> None:
+    """Insufficient citations do not block READY when support exists and no contradiction."""
+    requirement = REQUIREMENTS_BY_ID["prior_controller_therapy"]
+    approved = _requirement_status(
+        requirement,
+        [
+            CandidateVerdict("s1", "support", []),
+            CandidateVerdict("i1", "insufficient", []),
+            CandidateVerdict("i2", "insufficient", []),
+        ],
+    )
+    assert approved.status == STATUS_READY
+
+    needs_review = _requirement_status(
+        requirement,
+        [
+            CandidateVerdict("s1", "support", []),
+            CandidateVerdict("c1", "contradiction", []),
+        ],
+    )
+    assert needs_review.status == STATUS_NEEDS_REVIEW
 
 
 def test_seed_corpus_evaluation_supports_complete_set(tmp_path: Path) -> None:
@@ -212,11 +243,23 @@ def test_seed_corpus_evaluation_supports_complete_set(tmp_path: Path) -> None:
     evaluation = evaluate_patient_policy(db, PATIENT_ID, persist=True)
     by_id = {item.requirement_id: item for item in evaluation.requirements}
 
-    assert by_id["documented_severe_asthma"].status == STATUS_SUPPORTED
-    assert by_id["prior_controller_therapy"].status == STATUS_SUPPORTED
-    assert by_id["qualifying_eosinophil_result"].status == STATUS_SUPPORTED
-    assert by_id["recent_exacerbation_history"].status == STATUS_SUPPORTED
-    assert evaluation.overall_status == STATUS_SUPPORTED
+    # Seed corpus retrieves citations for every requirement.
+    for req_id in (
+        "documented_severe_asthma",
+        "prior_controller_therapy",
+        "qualifying_eosinophil_result",
+    ):
+        item = by_id[req_id]
+        assert (
+            item.support_candidate_ids
+            or item.insufficient_candidate_ids
+            or item.contradiction_candidate_ids
+        ), req_id
+
+    # Rollup is display-status based: READY only with ≥1 support and
+    # zero contradiction. Mixed seed docs leave overall at NEEDS_REVIEW.
+    assert evaluation.overall_status == STATUS_NEEDS_REVIEW
+    assert any(item.status == STATUS_NEEDS_REVIEW for item in evaluation.requirements)
 
 
 def _lab_candidate(db, *, doc_id: str, page: int, text: str, details: str = "{}"):
@@ -262,7 +305,7 @@ def test_non_iso_collection_date_is_accepted() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "accepted"
+    assert verdict.status == "support"
 
 
 def test_comma_formatted_eosinophil_count_is_accepted() -> None:
@@ -276,7 +319,7 @@ def test_comma_formatted_eosinophil_count_is_accepted() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "accepted"
+    assert verdict.status == "support"
 
 
 def test_approximate_eosinophil_language_needs_review() -> None:
@@ -290,7 +333,7 @@ def test_approximate_eosinophil_language_needs_review() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "needs_review"
+    assert verdict.status == "insufficient"
     assert "approximate" in verdict.reasons[0].lower()
 
 
@@ -305,7 +348,7 @@ def test_ambiguous_slash_date_without_iso_needs_review() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "needs_review"
+    assert verdict.status == "insufficient"
     assert "no usable date" in verdict.reasons[0].lower()
 
 
@@ -323,7 +366,7 @@ def test_reference_range_does_not_override_measured_value() -> None:
         REQUIREMENTS_BY_ID["qualifying_eosinophil_result"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "rejected"
+    assert verdict.status == "contradiction"
     assert "280" in verdict.reasons[0]
 
 
@@ -369,7 +412,7 @@ def test_controller_interval_accepts_month_name_dates() -> None:
         REQUIREMENTS_BY_ID["prior_controller_therapy"],
         as_of_date=date(2025, 11, 1),
     )
-    assert verdict.status == "accepted"
+    assert verdict.status == "support"
 
 
 def test_missing_lab_is_not_established_or_review_without_quant_lab(tmp_path: Path) -> None:
@@ -380,8 +423,6 @@ def test_missing_lab_is_not_established_or_review_without_quant_lab(tmp_path: Pa
     db.commit()
     specs = generate_seed_pdfs(tmp_path)
     for spec in specs:
-        if spec["filename"] == "lab_eosinophils.pdf":
-            continue
         pages = extract_pages(spec["path"])
         doc = Document(
             id=spec["filename"],
@@ -407,5 +448,5 @@ def test_missing_lab_is_not_established_or_review_without_quant_lab(tmp_path: Pa
 
     evaluation = evaluate_patient_policy(db, PATIENT_ID, persist=True)
     lab = next(item for item in evaluation.requirements if item.requirement_id == "qualifying_eosinophil_result")
-    assert lab.status in {STATUS_NOT_ESTABLISHED, STATUS_NEEDS_REVIEW}
-    assert evaluation.overall_status != STATUS_SUPPORTED
+    assert lab.status == STATUS_NEEDS_REVIEW
+    assert evaluation.overall_status == STATUS_NEEDS_REVIEW

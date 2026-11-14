@@ -15,6 +15,16 @@ from app.services.policy import (
     RequirementDefinition,
     load_policy,
 )
+from app.services.status_vocab import (
+    CANDIDATE_CONTRADICTION,
+    CANDIDATE_INSUFFICIENT,
+    CANDIDATE_SUPPORT,
+    REQUIREMENT_READY,
+    REQUIREMENT_NEEDS_REVIEW,
+    STATUSES,
+    canonicalize_status,
+    model_status_from_probs,
+)
 from app.services.value_parsing import (
     extract_dates_from_text,
     find_numeric_mentions,
@@ -22,13 +32,18 @@ from app.services.value_parsing import (
     select_threshold_values,
 )
 
-STATUS_SUPPORTED = "SUPPORTED"
-STATUS_NOT_ESTABLISHED = "NOT_ESTABLISHED"
-STATUS_NEEDS_REVIEW = "NEEDS_REVIEW"
-
-CANDIDATE_ACCEPTED = "accepted"
-CANDIDATE_REJECTED = "rejected"
-CANDIDATE_NEEDS_REVIEW = "needs_review"
+# Re-export canonical statuses for existing imports.
+STATUS_SUPPORT = CANDIDATE_SUPPORT
+STATUS_INSUFFICIENT = CANDIDATE_INSUFFICIENT
+STATUS_CONTRADICTION = CANDIDATE_CONTRADICTION
+CANDIDATE_ACCEPTED = CANDIDATE_SUPPORT  # legacy alias
+CANDIDATE_REJECTED = CANDIDATE_CONTRADICTION  # legacy alias
+CANDIDATE_NEEDS_REVIEW = CANDIDATE_INSUFFICIENT  # legacy alias
+STATUS_SUPPORTED = REQUIREMENT_READY  # legacy alias
+STATUS_NOT_ESTABLISHED = REQUIREMENT_NEEDS_REVIEW  # legacy alias
+STATUS_NEEDS_REVIEW = REQUIREMENT_NEEDS_REVIEW
+STATUS_READY = REQUIREMENT_READY
+STATUS_APPROVED = REQUIREMENT_READY  # legacy alias
 
 
 @dataclass
@@ -45,9 +60,22 @@ class RequirementEvaluation:
     status: str
     explanation: str
     suggested_document_types: list[str]
-    accepted_candidate_ids: list[str]
-    review_candidate_ids: list[str]
-    rejected_candidate_ids: list[str]
+    support_candidate_ids: list[str]
+    insufficient_candidate_ids: list[str]
+    contradiction_candidate_ids: list[str]
+
+    # Legacy property aliases for transitional call sites.
+    @property
+    def accepted_candidate_ids(self) -> list[str]:
+        return self.support_candidate_ids
+
+    @property
+    def review_candidate_ids(self) -> list[str]:
+        return self.insufficient_candidate_ids
+
+    @property
+    def rejected_candidate_ids(self) -> list[str]:
+        return self.contradiction_candidate_ids
 
 
 @dataclass
@@ -160,9 +188,188 @@ def _nli_enabled(use_nli: bool | None) -> bool:
     return bool(get_settings().use_nli_support)
 
 
+def _nli_score_from_details(candidate: EvidenceCandidate, quote: str, requirement: RequirementDefinition):
+    """Reuse persisted NLI probs so reload / status updates skip model inference."""
+    from app.services.nli_deberta import NliScore, requirement_hypothesis
+
+    details = _parse_details(candidate)
+    raw = details.get("nli")
+    if not isinstance(raw, dict):
+        return None
+    try:
+        support = float(raw.get("support", raw.get("entailment")))
+        insufficient = float(raw.get("insufficient", raw.get("neutral")))
+        contradiction = float(raw["contradiction"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    predicted = (
+        canonicalize_status(str(raw.get("predicted_label") or ""))
+        or str(raw.get("predicted_label") or "")
+        or CANDIDATE_INSUFFICIENT
+    )
+    return NliScore(
+        premise=quote,
+        hypothesis=requirement_hypothesis(requirement),
+        support=support,
+        insufficient=insufficient,
+        contradiction=contradiction,
+        predicted_label=predicted,
+        model_name=str(raw.get("model_name") or "cached"),
+    )
+
+
+def _try_nli_score(
+    quote: str,
+    requirement: RequirementDefinition,
+    *,
+    candidate: EvidenceCandidate | None = None,
+    force: bool = False,
+):
+    """Score passage↔requirement when optional ML deps are installed.
+
+    Reuses `extracted_details.nli` when present unless `force=True`.
+    """
+    from app.services.nli_deberta import (
+        NliDependenciesMissing,
+        ml_dependencies_available,
+        score_requirement_passage,
+    )
+
+    if candidate is not None and not force:
+        cached = _nli_score_from_details(candidate, quote, requirement)
+        if cached is not None:
+            return cached
+
+    if not ml_dependencies_available():
+        return None
+    settings = get_settings()
+    model_name = (settings.nli_model_name or "").strip() or None
+    try:
+        if model_name:
+            return score_requirement_passage(quote, requirement, model_name=model_name)
+        return score_requirement_passage(quote, requirement)
+    except NliDependenciesMissing:
+        return None
+
+
+def _attach_nli_details(candidate: EvidenceCandidate, score) -> None:
+    """Persist display NLI probs on the candidate without changing verdicts."""
+    details = _parse_details(candidate)
+    from app.services.nli_deberta import resolve_nli_gate_thresholds
+
+    support_min = None
+    contradiction_min = None
+    contradiction_margin = None
+    try:
+        contradiction_min, contradiction_margin, support_min = resolve_nli_gate_thresholds()
+    except Exception:
+        pass
+    model_status = model_status_from_probs(
+        float(score.support),
+        float(score.insufficient),
+        float(score.contradiction),
+        support_min=support_min or 0.70,
+        contradiction_min=contradiction_min or 0.45,
+        contradiction_margin=contradiction_margin or 0.15,
+    )
+    details["nli"] = {
+        "support": float(score.support),
+        "insufficient": float(score.insufficient),
+        "contradiction": float(score.contradiction),
+        # Legacy keys for older clients.
+        "entailment": float(score.support),
+        "neutral": float(score.insufficient),
+        "predicted_label": str(score.predicted_label),
+        "model_status": model_status,
+        "model_name": str(score.model_name),
+        "support_probability": float(score.support),
+    }
+    candidate.extracted_details_json = json.dumps(details, ensure_ascii=False)
+
+
+def clinician_override_status(candidate: EvidenceCandidate) -> str | None:
+    details = _parse_details(candidate)
+    raw = details.get("clinician_override")
+    if isinstance(raw, dict):
+        return canonicalize_status(raw.get("status"))
+    if isinstance(raw, str):
+        return canonicalize_status(raw)
+    return None
+
+
+def set_clinician_override(candidate: EvidenceCandidate, status: str) -> str:
+    """Persist a clinician citation override and apply it as verification_status."""
+    canonical = canonicalize_status(status)
+    if canonical not in STATUSES:
+        raise ValueError(
+            f"Invalid status '{status}'. Expected one of: {', '.join(STATUSES)}"
+        )
+    details = _parse_details(candidate)
+    details["clinician_override"] = {
+        "status": canonical,
+        "previous_status": canonicalize_status(candidate.verification_status)
+        or candidate.verification_status,
+    }
+    candidate.extracted_details_json = json.dumps(details, ensure_ascii=False)
+    candidate.verification_status = canonical
+    return canonical
+
+
+def clear_clinician_override(candidate: EvidenceCandidate) -> None:
+    details = _parse_details(candidate)
+    details.pop("clinician_override", None)
+    candidate.extracted_details_json = json.dumps(details, ensure_ascii=False)
+
+
+def model_status_for_candidate(candidate: EvidenceCandidate) -> str | None:
+    details = _parse_details(candidate)
+    nli = details.get("nli")
+    if not isinstance(nli, dict):
+        return None
+    if "model_status" in nli:
+        return canonicalize_status(str(nli["model_status"]))
+    try:
+        support = float(nli.get("support", nli.get("entailment", 0.0)))
+        insufficient = float(nli.get("insufficient", nli.get("neutral", 0.0)))
+        contradiction = float(nli.get("contradiction", 0.0))
+    except (TypeError, ValueError):
+        return canonicalize_status(str(nli.get("predicted_label") or ""))
+    from app.services.nli_deberta import resolve_nli_gate_thresholds
+
+    try:
+        contradiction_min, contradiction_margin, support_min = resolve_nli_gate_thresholds()
+    except Exception:
+        contradiction_min, contradiction_margin, support_min = 0.45, 0.15, 0.70
+    return model_status_from_probs(
+        support,
+        insufficient,
+        contradiction,
+        support_min=support_min,
+        contradiction_min=contradiction_min,
+        contradiction_margin=contradiction_margin,
+    )
+
+
+def display_status_for_candidate(candidate: EvidenceCandidate) -> str:
+    """Clinician override > model cutoff prediction > Milestone-3 verification."""
+    override = clinician_override_status(candidate)
+    if override:
+        return override
+    model = model_status_for_candidate(candidate)
+    if model:
+        return model
+    return (
+        canonicalize_status(candidate.verification_status)
+        or candidate.verification_status
+        or CANDIDATE_INSUFFICIENT
+    )
+
+
 def _apply_nli_signal(
     quote: str,
     requirement: RequirementDefinition,
+    *,
+    score=None,
 ) -> CandidateVerdict | str | None:
     """Optional DeBERTa negation / support-note signal.
 
@@ -172,24 +379,11 @@ def _apply_nli_signal(
       - None if NLI is unavailable or has no action
     Never performs date/numeric comparisons.
     """
-    from app.services.nli_deberta import (
-        NliDependenciesMissing,
-        interpret_nli_verification_signal,
-        ml_dependencies_available,
-        score_requirement_passage,
-    )
+    from app.services.nli_deberta import interpret_nli_verification_signal
 
-    if not ml_dependencies_available():
-        return None
-    settings = get_settings()
-    model_name = (settings.nli_model_name or "").strip() or None
-    try:
-        score = (
-            score_requirement_passage(quote, requirement, model_name=model_name)
-            if model_name
-            else score_requirement_passage(quote, requirement)
-        )
-    except NliDependenciesMissing:
+    if score is None:
+        score = _try_nli_score(quote, requirement)
+    if score is None:
         return None
     # Thresholds: env > TREC-calibrated file > config defaults.
     signal = interpret_nli_verification_signal(score)
@@ -217,6 +411,7 @@ def verify_candidate(
     *,
     as_of_date: date,
     use_nli: bool | None = None,
+    force_nli: bool = False,
 ) -> CandidateVerdict:
     reasons: list[str] = []
     quote = candidate.supporting_quote or ""
@@ -229,6 +424,15 @@ def verify_candidate(
             status=CANDIDATE_REJECTED,
             reasons=["Supporting quotation was not found in the source page text."],
         )
+
+    # Display scores whenever ML is available; does not change verdicts by itself.
+    # Prefer cached probs so page reload / clinician overrides stay snappy.
+    nli_support_note: str | None = None
+    nli_score = _try_nli_score(
+        quote, requirement, candidate=candidate, force=force_nli
+    )
+    if nli_score is not None:
+        _attach_nli_details(candidate, nli_score)
 
     if requirement.acceptable_document_types:
         if not doc_type:
@@ -274,9 +478,8 @@ def verify_candidate(
 
     # DeBERTa precision/negation signal: only after on-topic keyword gate.
     # Date/numeric/doc-type math below remains the source of truth for thresholds.
-    nli_support_note: str | None = None
     if _nli_enabled(use_nli):
-        nli_result = _apply_nli_signal(quote, requirement)
+        nli_result = _apply_nli_signal(quote, requirement, score=nli_score)
         if isinstance(nli_result, CandidateVerdict):
             return CandidateVerdict(
                 candidate_id=candidate.id,
@@ -373,60 +576,42 @@ def _requirement_status(
     requirement: RequirementDefinition,
     verdicts: list[CandidateVerdict],
 ) -> RequirementEvaluation:
-    accepted = [v for v in verdicts if v.status == CANDIDATE_ACCEPTED]
-    reviews = [v for v in verdicts if v.status == CANDIDATE_NEEDS_REVIEW]
-    rejected = [v for v in verdicts if v.status == CANDIDATE_REJECTED]
+    support = [v for v in verdicts if v.status == CANDIDATE_SUPPORT]
+    insufficient = [v for v in verdicts if v.status == CANDIDATE_INSUFFICIENT]
+    contradiction = [v for v in verdicts if v.status == CANDIDATE_CONTRADICTION]
 
-    if len(accepted) >= requirement.min_accepted_candidates:
-        status = STATUS_SUPPORTED
-        explanation = (
-            f"Found {len(accepted)} accepted source-backed candidate(s) meeting policy constraints."
-        )
-    elif reviews:
-        status = STATUS_NEEDS_REVIEW
-        explanation = (
-            "No candidate fully established the requirement; at least one passage needs clinician review."
-        )
+    # READY only when there is ≥1 support and zero contradiction citations.
+    if contradiction or not support:
+        status = REQUIREMENT_NEEDS_REVIEW
     else:
-        status = STATUS_NOT_ESTABLISHED
-        explanation = (
-            "Available records do not establish this documentation requirement under the configured rules. "
-            "This does not mean the patient clinically fails the criterion."
-        )
+        status = REQUIREMENT_READY
 
     return RequirementEvaluation(
         requirement_id=requirement.id,
         title=requirement.title,
         status=status,
-        explanation=explanation,
+        explanation="",
         suggested_document_types=list(requirement.suggested_document_types),
-        accepted_candidate_ids=[v.candidate_id for v in accepted],
-        review_candidate_ids=[v.candidate_id for v in reviews],
-        rejected_candidate_ids=[v.candidate_id for v in rejected],
+        support_candidate_ids=[v.candidate_id for v in support],
+        insufficient_candidate_ids=[v.candidate_id for v in insufficient],
+        contradiction_candidate_ids=[v.candidate_id for v in contradiction],
     )
 
 
 def _overall_status(logic: str, requirement_evals: list[RequirementEvaluation]) -> str:
     statuses = [item.status for item in requirement_evals]
+    if not statuses:
+        return REQUIREMENT_NEEDS_REVIEW
     if logic.upper() == "OR":
-        if STATUS_SUPPORTED in statuses:
-            return STATUS_SUPPORTED
-        if STATUS_NEEDS_REVIEW in statuses:
-            return STATUS_NEEDS_REVIEW
-        return STATUS_NOT_ESTABLISHED
-
-    # Default AND
-    if all(status == STATUS_SUPPORTED for status in statuses):
-        return STATUS_SUPPORTED
-    if any(status == STATUS_NEEDS_REVIEW for status in statuses):
-        return STATUS_NEEDS_REVIEW
-    if any(status == STATUS_NOT_ESTABLISHED for status in statuses):
-        # Mix of supported + not established under AND → not fully established,
-        # but call out review only when review exists (handled above).
-        if any(status == STATUS_SUPPORTED for status in statuses):
-            return STATUS_NOT_ESTABLISHED
-        return STATUS_NOT_ESTABLISHED
-    return STATUS_NOT_ESTABLISHED
+        return (
+            REQUIREMENT_READY
+            if REQUIREMENT_READY in statuses
+            else REQUIREMENT_NEEDS_REVIEW
+        )
+    # Default AND: every requirement must be READY.
+    if all(status == REQUIREMENT_READY for status in statuses):
+        return REQUIREMENT_READY
+    return REQUIREMENT_NEEDS_REVIEW
 
 
 def evaluate_patient_policy(
@@ -436,14 +621,17 @@ def evaluate_patient_policy(
     policy_id: str = FICTIONAL_POLICY_ID,
     persist: bool = True,
     use_nli: bool | None = None,
+    force_nli: bool = False,
 ) -> PolicyEvaluation:
     policy: PolicyDefinition = load_policy(policy_id)
+    requirement_ids = [requirement.id for requirement in policy.requirements]
     candidates = (
         db.query(EvidenceCandidate)
         .options(joinedload(EvidenceCandidate.document))
         .filter(
             EvidenceCandidate.patient_id == patient_id,
-            EvidenceCandidate.policy_id == policy.id,
+            # Shared requirement ids can be retrieved under another insurer's policy_id.
+            EvidenceCandidate.requirement_id.in_(requirement_ids or [""]),
         )
         .order_by(
             EvidenceCandidate.requirement_id,
@@ -468,16 +656,43 @@ def evaluate_patient_policy(
                 requirement,
                 as_of_date=policy.as_of_date,
                 use_nli=use_nli,
+                force_nli=force_nli,
             )
             for candidate in req_candidates
         ]
-        all_verdicts.extend(verdicts)
-        requirement_evals.append(_requirement_status(requirement, verdicts))
+        # Rollup follows the same status the checklist paints:
+        # clinician override > model cutoff > Milestone-3 verification.
+        adjusted: list[CandidateVerdict] = []
+        for candidate, verdict in zip(req_candidates, verdicts, strict=True):
+            override = clinician_override_status(candidate)
+            if not override:
+                # So display_status fallback sees the fresh Milestone-3 result.
+                candidate.verification_status = verdict.status
+            rollup_status = display_status_for_candidate(candidate)
+            reasons = list(verdict.reasons)
+            if override:
+                reasons.append(
+                    f"Clinician override set status to {rollup_status}."
+                )
+            elif rollup_status != verdict.status:
+                reasons.append(
+                    f"Requirement rollup uses display status {rollup_status} "
+                    f"over verification {verdict.status}."
+                )
+            adjusted.append(
+                CandidateVerdict(
+                    candidate_id=candidate.id,
+                    status=rollup_status,
+                    reasons=reasons,
+                )
+            )
+        all_verdicts.extend(adjusted)
+        requirement_evals.append(_requirement_status(requirement, adjusted))
 
         if persist:
-            verdict_by_id = {v.candidate_id: v for v in verdicts}
-            for candidate in req_candidates:
-                candidate.verification_status = verdict_by_id[candidate.id].status
+            for candidate, verdict in zip(req_candidates, verdicts, strict=True):
+                override = clinician_override_status(candidate)
+                candidate.verification_status = override or verdict.status
 
     if persist:
         db.commit()

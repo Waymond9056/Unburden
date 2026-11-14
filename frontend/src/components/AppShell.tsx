@@ -70,7 +70,10 @@ export function AppShell() {
               <select
                 value={patientId}
                 onChange={(event) => switchPatient(event.target.value)}
-                className="border border-line bg-white/80 px-2 py-1.5 text-sm text-ink"
+                className="w-auto appearance-none border border-line bg-white/80 bg-[length:12px] bg-[position:right_10px_center] bg-no-repeat py-1.5 pl-2 pr-8 text-sm text-ink [field-sizing:content]"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                }}
               >
                 {patients.length === 0 ? (
                   <option value={patientId}>{patientId}</option>

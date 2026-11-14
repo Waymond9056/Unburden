@@ -3,10 +3,10 @@
 
 Uses araag2/TREC_Clinical-Trials (2021_processed) — 3-way labels, no weight updates.
 
-Label map (HF string labels ↔ Unburden NLI framing):
-  definitely relevant → entailment (eligible / support)
-  possibly relevant   → contradiction (excluded / ruled out)
-  not relevant        → neutral (off-topic / insufficient)
+Label map (HF string labels ↔ Unburden status vocabulary):
+  definitely relevant → support
+  possibly relevant   → contradiction
+  not relevant        → insufficient
 
 Optimizes for Unburden's gate:
   - catch contradictions (negations) with reject/review
@@ -44,9 +44,9 @@ CACHE_PATH = ROOT / "benchmarks" / "trec_calibration_score_cache.jsonl"
 SYNTH_PATH = ROOT / "benchmarks" / "nli_support_benchmark.json"
 
 LABEL_MAP = {
-    "definitely relevant": "entailment",
+    "definitely relevant": "support",
     "possibly relevant": "contradiction",
-    "not relevant": "neutral",
+    "not relevant": "insufficient",
 }
 
 
@@ -122,8 +122,8 @@ def _action_for(
     score = NliScore(
         premise="",
         hypothesis="",
-        entailment=pair.entailment,
-        neutral=pair.neutral,
+        support=pair.entailment,
+        insufficient=pair.neutral,
         contradiction=pair.contradiction,
         predicted_label=pair.predicted_label,
         model_name="calibration",

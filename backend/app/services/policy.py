@@ -10,6 +10,12 @@ from typing import Any
 
 POLICY_DIR = Path(__file__).resolve().parents[1] / "policies"
 FICTIONAL_POLICY_ID = "fictional-severe-asthma-policy"
+SIMPLE_ASTHMA_POLICY_ID = "simple-asthma-insurance"
+
+POLICY_FILES: dict[str, str] = {
+    FICTIONAL_POLICY_ID: "fictional_severe_asthma_pa.json",
+    SIMPLE_ASTHMA_POLICY_ID: "simple_asthma_insurance.json",
+}
 
 
 @dataclass(frozen=True)
@@ -37,7 +43,7 @@ class RequirementDefinition:
     ambiguous_if_quote_matches_any: tuple[str, ...]
     temporal: TemporalConstraint | None
     numeric: NumericConstraint | None
-    min_accepted_candidates: int
+    min_support_candidates: int
     suggested_document_types: tuple[str, ...]
     require_interval_days_min: int | None = None
     policy_id: str = FICTIONAL_POLICY_ID
@@ -82,7 +88,9 @@ def _parse_requirement(raw: dict[str, Any], policy_id: str) -> RequirementDefini
             if numeric_raw
             else None
         ),
-        min_accepted_candidates=int(raw.get("min_accepted_candidates", 1)),
+        min_support_candidates=int(
+            raw.get("min_support_candidates", raw.get("min_accepted_candidates", 1))
+        ),
         suggested_document_types=tuple(raw.get("suggested_document_types", [])),
         require_interval_days_min=(
             int(raw["require_interval_days_min"])
@@ -95,9 +103,10 @@ def _parse_requirement(raw: dict[str, Any], policy_id: str) -> RequirementDefini
 
 @lru_cache
 def load_policy(policy_id: str = FICTIONAL_POLICY_ID) -> PolicyDefinition:
-    path = POLICY_DIR / "fictional_severe_asthma_pa.json"
-    if policy_id != FICTIONAL_POLICY_ID:
+    filename = POLICY_FILES.get(policy_id)
+    if filename is None:
         raise KeyError(f"Unknown policy: {policy_id}")
+    path = POLICY_DIR / filename
     raw = json.loads(path.read_text(encoding="utf-8"))
     requirements = tuple(_parse_requirement(item, raw["id"]) for item in raw["requirements"])
     return PolicyDefinition(
@@ -110,10 +119,26 @@ def load_policy(policy_id: str = FICTIONAL_POLICY_ID) -> PolicyDefinition:
     )
 
 
+def list_policy_ids() -> tuple[str, ...]:
+    return tuple(POLICY_FILES.keys())
+
+
+def list_policies() -> tuple[PolicyDefinition, ...]:
+    return tuple(load_policy(policy_id) for policy_id in list_policy_ids())
+
+
 def get_requirements(policy_id: str = FICTIONAL_POLICY_ID) -> tuple[RequirementDefinition, ...]:
     return load_policy(policy_id).requirements
 
 
+def known_policy_id(policy_id: str) -> bool:
+    return policy_id in POLICY_FILES
+
+
 POLICY = load_policy()
 REQUIREMENTS = POLICY.requirements
-REQUIREMENTS_BY_ID = {requirement.id: requirement for requirement in REQUIREMENTS}
+# Union across insurers so shared requirement ids (e.g. diagnosis) resolve.
+REQUIREMENTS_BY_ID: dict[str, RequirementDefinition] = {}
+for _policy in list_policies():
+    for _requirement in _policy.requirements:
+        REQUIREMENTS_BY_ID.setdefault(_requirement.id, _requirement)

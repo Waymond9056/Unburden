@@ -1,6 +1,11 @@
 "use client";
 
-import type { PolicyEvaluation, RequirementEvaluation } from "@/lib/types";
+import type {
+  CandidateStatus,
+  EvidenceCandidate,
+  PolicyEvaluation,
+  RequirementEvaluation,
+} from "@/lib/types";
 
 export type RequirementStatusChange = {
   requirement_id: string;
@@ -19,16 +24,32 @@ type RequirementsChecklistProps = {
     quote?: string,
   ) => void;
   onReevaluate: () => void;
+  onUpdateCandidateStatus?: (
+    candidateId: string,
+    status: CandidateStatus,
+  ) => Promise<void> | void;
 };
+
+const STATUS_OPTIONS: CandidateStatus[] = [
+  "support",
+  "insufficient",
+  "contradiction",
+];
 
 function statusStyles(status: string) {
   switch (status) {
+    case "READY":
+    case "APPROVED":
+    case "support":
     case "SUPPORTED":
     case "accepted":
       return "border-[#1b7a6d]/50 bg-[#e7f6f2] text-[#0f5a51]";
     case "NEEDS_REVIEW":
     case "needs_review":
+      return "border-line bg-mist/70 text-muted";
+    case "insufficient":
       return "border-[#c48a2e]/45 bg-[#fff6e8] text-[#8a6230]";
+    case "contradiction":
     case "NOT_ESTABLISHED":
     case "rejected":
       return "border-[#b45656]/40 bg-[#fbeaea] text-[#8f3d3d]";
@@ -37,10 +58,87 @@ function statusStyles(status: string) {
   }
 }
 
+function citationStatus(candidate: EvidenceCandidate) {
+  return (
+    candidate.display_status ||
+    candidate.clinician_override ||
+    candidate.model_status ||
+    candidate.verification_status
+  );
+}
+
+/** Explainable NLI match in [0, 1]: up with entailment, down with contradiction. */
+function nliMatchScore(nli: {
+  entailment?: number | null;
+  support?: number | null;
+  support_probability?: number | null;
+  contradiction: number;
+}): number {
+  const entailment =
+    nli.entailment ?? nli.support ?? nli.support_probability ?? 0;
+  return 0.5 + 0.5 * (entailment - nli.contradiction);
+}
+
+function candidateNli(candidate: EvidenceCandidate) {
+  if (candidate.nli != null) return candidate.nli;
+  const raw = candidate.extracted_details?.nli;
+  if (!raw || typeof raw !== "object") return null;
+  const nli = raw as Record<string, unknown>;
+  try {
+    const support = Number(
+      nli.support ?? nli.entailment ?? nli.support_probability,
+    );
+    const contradiction = Number(nli.contradiction);
+    if (!Number.isFinite(support) || !Number.isFinite(contradiction)) {
+      return null;
+    }
+    return {
+      support,
+      insufficient: Number(nli.insufficient ?? nli.neutral ?? 0),
+      contradiction,
+      support_probability: support,
+      entailment: support,
+      neutral: Number(nli.neutral ?? nli.insufficient ?? 0),
+      predicted_label: String(nli.predicted_label ?? ""),
+      model_name: String(nli.model_name ?? ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function candidateMatchScore(candidate: EvidenceCandidate): number {
+  const nli = candidateNli(candidate);
+  return nli != null ? nliMatchScore(nli) : -1;
+}
+
+function requirementCitations(item: RequirementEvaluation) {
+  const merged = [
+    ...(item.support_candidates ?? item.supporting_candidates ?? []),
+    ...(item.insufficient_candidates ?? item.review_candidates ?? []),
+    ...(item.contradiction_candidates ?? []),
+  ];
+  const seen = new Set<string>();
+  const unique: typeof merged = [];
+  for (const candidate of merged) {
+    if (seen.has(candidate.id)) continue;
+    seen.add(candidate.id);
+    unique.push(candidate);
+  }
+  // Highest % match first (stable ties by page / id).
+  return unique.sort((a, b) => {
+    const scoreDiff = candidateMatchScore(b) - candidateMatchScore(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    if (a.source_page !== b.source_page) return a.source_page - b.source_page;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 function RequirementBlock({
   item,
   change,
   onOpenCandidate,
+  onUpdateCandidateStatus,
 }: {
   item: RequirementEvaluation;
   change?: RequirementStatusChange;
@@ -49,8 +147,12 @@ function RequirementBlock({
     page: number,
     quote?: string,
   ) => void;
+  onUpdateCandidateStatus?: (
+    candidateId: string,
+    status: CandidateStatus,
+  ) => Promise<void> | void;
 }) {
-  const citations = [...item.supporting_candidates, ...item.review_candidates];
+  const citations = requirementCitations(item);
   return (
     <article
       className={`border-t border-line/70 py-4 ${
@@ -66,9 +168,11 @@ function RequirementBlock({
               {change.to.replaceAll("_", " ")}
             </p>
           )}
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-soft">
-            {item.explanation}
-          </p>
+          {item.explanation.trim() && (
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-soft">
+              {item.explanation}
+            </p>
+          )}
         </div>
         <span
           className={`border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(item.status)}`}
@@ -79,37 +183,77 @@ function RequirementBlock({
 
       {citations.length > 0 && (
         <ul className="mt-3 space-y-2">
-          {citations.map((candidate) => (
-            <li key={candidate.id}>
-              <button
-                type="button"
-                onClick={() =>
-                  onOpenCandidate(
-                    candidate.document_id,
-                    candidate.source_page,
-                    candidate.supporting_quote,
-                  )
-                }
-                className={`w-full border px-3 py-2 text-left hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${statusStyles(candidate.verification_status)}`}
-              >
-                <div className="text-xs uppercase tracking-[0.12em]">
-                  {candidate.verification_status.replaceAll("_", " ")} · page{" "}
-                  {candidate.source_page} ·{" "}
-                  {candidate.source_document_name || candidate.document_id}
+          {citations.map((candidate) => {
+            const colorStatus = citationStatus(candidate);
+            const nli = candidateNli(candidate);
+            const matchPctCard =
+              nli != null ? Math.round(nliMatchScore(nli) * 100) : null;
+            return (
+              <li key={candidate.id}>
+                <div
+                  className={`w-full border px-3 py-2 ${statusStyles(colorStatus)}`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenCandidate(
+                          candidate.document_id,
+                          candidate.source_page,
+                          candidate.supporting_quote,
+                        )
+                      }
+                      className="text-left text-xs uppercase tracking-[0.12em] hover:underline focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                    >
+                      {colorStatus.replaceAll("_", " ")} · page{" "}
+                      {candidate.source_page} ·{" "}
+                      {candidate.source_document_name || candidate.document_id}
+                      {candidate.clinician_override
+                        ? " · clinician override"
+                        : candidate.model_status
+                          ? " · model"
+                          : ""}
+                    </button>
+                    {matchPctCard != null && (
+                      <span
+                        className="shrink-0 text-xs font-semibold tabular-nums tracking-normal"
+                        title="NLI match = ½ + ½×(entailment − contradiction). Color uses TREC cutoffs unless a clinician override is set."
+                      >
+                        {matchPctCard}% match
+                      </span>
+                    )}
+                  </div>
+                  {onUpdateCandidateStatus && (
+                    <label className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="uppercase tracking-[0.12em] opacity-80">
+                        Set status
+                      </span>
+                      <select
+                        className="border border-current/30 bg-white/70 px-2 py-1 text-xs text-ink"
+                        value={colorStatus}
+                        onChange={(event) => {
+                          void onUpdateCandidateStatus(
+                            candidate.id,
+                            event.target.value as CandidateStatus,
+                          );
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {STATUS_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
-              </button>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {item.status === "NOT_ESTABLISHED" &&
-        item.suggested_document_types.length > 0 && (
-          <p className="mt-3 text-sm text-muted">
-            Suggested documentation:{" "}
-            {item.suggested_document_types.join("; ")}.
-          </p>
-        )}
     </article>
   );
 }
@@ -120,8 +264,9 @@ export function RequirementsChecklist({
   statusChanges = [],
   onOpenCandidate,
   onReevaluate,
+  onUpdateCandidateStatus,
 }: RequirementsChecklistProps) {
-  if (loading) {
+  if (loading && !evaluation) {
     return (
       <section className="text-sm text-muted">
         Evaluating policy requirements…
@@ -154,27 +299,9 @@ export function RequirementsChecklist({
 
   return (
     <section>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl text-ink">Insurance requirements</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-            {evaluation.policy_name}
-          </p>
-        </div>
-        <div className="text-right">
-          <div
-            className={`inline-block border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(evaluation.overall_status)}`}
-          >
-            {evaluation.overall_status.replaceAll("_", " ")}
-          </div>
-          <button
-            type="button"
-            onClick={onReevaluate}
-            className="mt-2 block border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-          >
-            Re-evaluate
-          </button>
-        </div>
+      <div className="mb-4">
+        <h2 className="font-display text-2xl text-ink">Insurance requirements</h2>
+       
       </div>
 
       {statusChanges.length > 0 && (
@@ -185,10 +312,6 @@ export function RequirementsChecklist({
         </div>
       )}
 
-      <p className="text-xs uppercase tracking-[0.14em] text-muted">
-        Logic {evaluation.logic} · as of {evaluation.as_of_date}
-      </p>
-
       <div className="mt-2">
         {evaluation.requirements.map((item) => (
           <RequirementBlock
@@ -196,6 +319,7 @@ export function RequirementsChecklist({
             item={item}
             change={changeById.get(item.requirement_id)}
             onOpenCandidate={onOpenCandidate}
+            onUpdateCandidateStatus={onUpdateCandidateStatus}
           />
         ))}
       </div>

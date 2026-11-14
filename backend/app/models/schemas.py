@@ -39,6 +39,20 @@ class PolicyRequirementOut(BaseModel):
     description: str
 
 
+class CandidateNliOut(BaseModel):
+    """DeBERTa NLI display scores for one candidate (non-authoritative)."""
+
+    support_probability: float
+    support: float
+    insufficient: float
+    contradiction: float
+    predicted_label: str
+    model_name: str
+    # Legacy aliases.
+    entailment: Optional[float] = None
+    neutral: Optional[float] = None
+
+
 class EvidenceCandidateOut(BaseModel):
     id: str
     patient_id: str
@@ -55,6 +69,18 @@ class EvidenceCandidateOut(BaseModel):
     created_at: datetime
     source_document_name: Optional[str] = None
     source_document_type: Optional[str] = None
+    nli: Optional[CandidateNliOut] = None
+    # UI coloring: clinician override > model cutoff prediction > verification_status.
+    display_status: str = "insufficient"
+    model_status: Optional[str] = None
+    clinician_override: Optional[str] = None
+
+
+class CandidateStatusUpdate(BaseModel):
+    """Clinician override for a citation status (support | insufficient | contradiction)."""
+
+    status: str
+
 
 
 class PolicyOut(BaseModel):
@@ -78,6 +104,13 @@ class RequirementEvaluationOut(BaseModel):
     status: str
     explanation: str
     suggested_document_types: list[str] = Field(default_factory=list)
+    support_candidate_ids: list[str] = Field(default_factory=list)
+    insufficient_candidate_ids: list[str] = Field(default_factory=list)
+    contradiction_candidate_ids: list[str] = Field(default_factory=list)
+    support_candidates: list[EvidenceCandidateOut] = Field(default_factory=list)
+    insufficient_candidates: list[EvidenceCandidateOut] = Field(default_factory=list)
+    contradiction_candidates: list[EvidenceCandidateOut] = Field(default_factory=list)
+    # Legacy aliases kept for transitional clients.
     accepted_candidate_ids: list[str] = Field(default_factory=list)
     review_candidate_ids: list[str] = Field(default_factory=list)
     rejected_candidate_ids: list[str] = Field(default_factory=list)
@@ -149,13 +182,15 @@ class NliCandidateScoreOut(BaseModel):
     requirement_title: str
     premise: str
     hypothesis: str
-    entailment: float
-    neutral: float
+    support: float
+    insufficient: float
     contradiction: float
     predicted_label: str
     lexical_baseline_label: str
     verification_status: str
     model_name: str
+    entailment: Optional[float] = None
+    neutral: Optional[float] = None
 
 
 class NliScoreBatchOut(BaseModel):

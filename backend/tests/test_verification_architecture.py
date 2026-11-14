@@ -77,7 +77,7 @@ def test_architecture_benchmark_file_is_well_formed() -> None:
     assert len(payload["cases"]) >= 10
     for case in payload["cases"]:
         assert case["requirement_id"] in REQUIREMENTS_BY_ID
-        assert case["gold_status"] in {"accepted", "rejected", "needs_review"}
+        assert case["gold_status"] in {"support", "contradiction", "insufficient"}
 
 
 def test_use_nli_false_matches_default_deterministic_path() -> None:
@@ -97,7 +97,7 @@ def test_use_nli_false_matches_default_deterministic_path() -> None:
         db, candidate, requirement, as_of_date=date(2025, 11, 1), use_nli=False
     )
     # Keyword path still sees "severe persistent asthma" / J45.50 without NLI.
-    assert off.status == "accepted"
+    assert off.status == "support"
 
 
 def test_interpret_nli_signal_strong_contradiction_rejects() -> None:
@@ -106,8 +106,8 @@ def test_interpret_nli_signal_strong_contradiction_rejects() -> None:
     score = NliScore(
         premise="x",
         hypothesis="y",
-        entailment=0.05,
-        neutral=0.10,
+        support=0.05,
+        insufficient=0.10,
         contradiction=0.85,
         predicted_label="contradiction",
         model_name="test",
@@ -122,14 +122,106 @@ def test_interpret_nli_signal_strong_entailment_is_note_only() -> None:
     score = NliScore(
         premise="x",
         hypothesis="y",
-        entailment=0.92,
-        neutral=0.05,
+        support=0.92,
+        insufficient=0.05,
         contradiction=0.03,
-        predicted_label="entailment",
+        predicted_label="support",
         model_name="test",
     )
     signal = interpret_nli_verification_signal(score)
     assert signal.action == "support_note"
+
+
+def test_model_status_from_probs_uses_cutoffs() -> None:
+    from app.services.status_vocab import model_status_from_probs
+
+    assert (
+        model_status_from_probs(0.12, 0.18, 0.70, support_min=0.70, contradiction_min=0.45)
+        == "contradiction"
+    )
+    assert (
+        model_status_from_probs(0.82, 0.10, 0.08, support_min=0.70, contradiction_min=0.45)
+        == "support"
+    )
+    assert (
+        model_status_from_probs(0.40, 0.45, 0.15, support_min=0.70, contradiction_min=0.45)
+        == "insufficient"
+    )
+
+
+def test_clinician_override_wins_display_status() -> None:
+    from app.services.evidence_verification import (
+        display_status_for_candidate,
+        set_clinician_override,
+    )
+
+    candidate = EvidenceCandidate(
+        id="c-override",
+        patient_id="p",
+        document_id="d",
+        policy_id="fictional-severe-asthma-policy",
+        requirement_id="documented_severe_asthma",
+        source_page=1,
+        supporting_quote="Severe persistent asthma.",
+        extracted_details_json=json.dumps(
+            {
+                "nli": {
+                    "support": 0.82,
+                    "insufficient": 0.10,
+                    "contradiction": 0.08,
+                    "model_status": "support",
+                    "predicted_label": "support",
+                    "support_probability": 0.82,
+                }
+            }
+        ),
+        relevance_score=0.9,
+        retrieval_method="lexical",
+        verification_status="support",
+    )
+    assert display_status_for_candidate(candidate) == "support"
+    set_clinician_override(candidate, "insufficient")
+    assert display_status_for_candidate(candidate) == "insufficient"
+    assert candidate.verification_status == "insufficient"
+
+
+def test_attach_nli_details_persists_support_probability() -> None:
+    from app.api.patients import _nli_out_from_details
+    from app.services.evidence_verification import _attach_nli_details
+    from app.services.nli_deberta import NliScore
+
+    candidate = EvidenceCandidate(
+        id="c-nli",
+        patient_id="p",
+        document_id="d",
+        policy_id="fictional-severe-asthma-policy",
+        requirement_id="documented_severe_asthma",
+        source_page=1,
+        supporting_quote="Severe persistent asthma.",
+        extracted_details_json='{"dates":["2025-01-01"]}',
+        relevance_score=0.9,
+        retrieval_method="lexical",
+    )
+    score = NliScore(
+        premise="Severe persistent asthma.",
+        hypothesis="Patient has documented severe asthma.",
+        support=0.81,
+        insufficient=0.14,
+        contradiction=0.05,
+        predicted_label="support",
+        model_name="test-model",
+    )
+    _attach_nli_details(candidate, score)
+    details = json.loads(candidate.extracted_details_json)
+    assert details["dates"] == ["2025-01-01"]
+    assert details["nli"]["support_probability"] == pytest.approx(0.81)
+    assert details["nli"]["model_status"] == "support"
+    assert details["nli"]["predicted_label"] == "support"
+
+    nli_out = _nli_out_from_details(details)
+    assert nli_out is not None
+    assert nli_out.support_probability == pytest.approx(0.81)
+    assert nli_out.model_name == "test-model"
 
 
 @pytest.mark.skipif(
@@ -155,8 +247,8 @@ def test_m3_plus_deberta_rejects_paraphrased_asthma_negation() -> None:
     combo = verify_candidate(
         db, candidate, requirement, as_of_date=date(2025, 11, 1), use_nli=True
     )
-    assert m3.status == "accepted"
-    assert combo.status in {"rejected", "needs_review"}
+    assert m3.status == "support"
+    assert combo.status in {"contradiction", "insufficient"}
     assert "deberta" in combo.reasons[0].lower() or "nli" in combo.reasons[0].lower()
 
 
@@ -178,6 +270,6 @@ def test_m3_plus_deberta_still_rejects_below_threshold_via_math() -> None:
         db, candidate, requirement, as_of_date=date(2025, 11, 1), use_nli=True
     )
     # If NLI does not short-circuit, math must still reject 180 < 300.
-    assert combo.status in {"rejected", "needs_review"}
-    if combo.status == "rejected" and "nli" not in combo.reasons[0].lower():
+    assert combo.status in {"contradiction", "insufficient"}
+    if combo.status == "contradiction" and "nli" not in combo.reasons[0].lower():
         assert "300" in combo.reasons[0] or "180" in combo.reasons[0]

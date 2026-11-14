@@ -1,10 +1,12 @@
 import type {
+  CandidateStatus,
   DocumentDetail,
   DocumentSummary,
   EvidenceCandidate,
   EvidencePacket,
   Patient,
   PolicyEvaluation,
+  PolicySummary,
 } from "./types";
 
 const API_BASE =
@@ -48,16 +50,44 @@ export function listEvidenceCandidates(patientId: string) {
   );
 }
 
-export function getPolicyEvaluation(patientId: string) {
+export function listPolicies() {
+  return request<PolicySummary[]>("/api/policies");
+}
+
+export function getPolicyEvaluation(patientId: string, policyId?: string) {
+  const params = policyId
+    ? `?policy_id=${encodeURIComponent(policyId)}`
+    : "";
   return request<PolicyEvaluation>(
-    `/api/patients/${patientId}/policy-evaluation`,
+    `/api/patients/${patientId}/policy-evaluation${params}`,
   );
 }
 
-export function evaluatePolicy(patientId: string) {
-  return request<PolicyEvaluation>(`/api/patients/${patientId}/evaluate`, {
-    method: "POST",
-  });
+export function evaluatePolicy(patientId: string, policyId?: string) {
+  const params = policyId
+    ? `?policy_id=${encodeURIComponent(policyId)}`
+    : "";
+  return request<PolicyEvaluation>(
+    `/api/patients/${patientId}/evaluate${params}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function updateCandidateStatus(
+  patientId: string,
+  candidateId: string,
+  status: CandidateStatus,
+) {
+  return request<EvidenceCandidate>(
+    `/api/patients/${patientId}/evidence-candidates/${candidateId}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 export function getEvidencePacket(patientId: string) {
@@ -66,12 +96,29 @@ export function getEvidencePacket(patientId: string) {
   );
 }
 
-export function evidencePacketExportUrl(patientId: string) {
-  return `${API_BASE}/api/patients/${patientId}/evidence-packet/export`;
+export function evidencePacketExportUrl(
+  patientId: string,
+  documentIds?: string[],
+  policyId?: string,
+) {
+  const base = `${API_BASE}/api/patients/${patientId}/evidence-packet/export`;
+  const params = new URLSearchParams();
+  if (policyId) params.set("policy_id", policyId);
+  if (documentIds && documentIds.length > 0) {
+    params.set("document_ids", documentIds.join(","));
+  }
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
 }
 
-export async function downloadEvidencePacketPdf(patientId: string) {
-  const response = await fetch(evidencePacketExportUrl(patientId));
+export async function downloadEvidencePacketPdf(
+  patientId: string,
+  documentIds?: string[],
+  policyId?: string,
+) {
+  const response = await fetch(
+    evidencePacketExportUrl(patientId, documentIds, policyId),
+  );
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(detail || `Export failed (${response.status})`);

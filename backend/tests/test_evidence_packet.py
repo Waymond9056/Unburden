@@ -8,9 +8,9 @@ from app.core.database import Base
 from app.models.db import Document, DocumentPage, EvidenceCandidate, Patient
 from app.services.evidence_packet import build_evidence_packet
 from app.services.evidence_verification import (
-    CANDIDATE_ACCEPTED,
-    STATUS_NOT_ESTABLISHED,
-    STATUS_SUPPORTED,
+    CANDIDATE_SUPPORT,
+    STATUS_READY,
+    STATUS_NEEDS_REVIEW,
     RequirementEvaluation,
     PolicyEvaluation,
 )
@@ -70,35 +70,34 @@ def _add_accepted(
             extracted_details_json="{}",
             relevance_score=relevance,
             retrieval_method="lexical",
-            verification_status=CANDIDATE_ACCEPTED,
+            verification_status=CANDIDATE_SUPPORT,
         )
     )
     db.commit()
 
 
 def _evaluation_for(supported_map: dict[str, list[str]]) -> PolicyEvaluation:
-    """supported_map: requirement_id -> accepted candidate ids."""
+    """supported_map: requirement_id -> support candidate ids."""
     requirements = []
     for req_id, candidate_ids in supported_map.items():
         requirements.append(
             RequirementEvaluation(
                 requirement_id=req_id,
                 title=req_id,
-                status=STATUS_SUPPORTED if candidate_ids else STATUS_NOT_ESTABLISHED,
+                status=STATUS_READY if candidate_ids else STATUS_NEEDS_REVIEW,
                 explanation="",
                 suggested_document_types=["lab report"],
-                accepted_candidate_ids=candidate_ids,
-                review_candidate_ids=[],
-                rejected_candidate_ids=[],
+                support_candidate_ids=candidate_ids,
+                insufficient_candidate_ids=[],
+                contradiction_candidate_ids=[],
             )
         )
-    # Fill remaining policy requirements as not established so packet only covers supported.
+    # Fill remaining policy requirements as contradiction so packet only covers support.
     known = set(supported_map)
     for req_id in (
         "documented_severe_asthma",
         "prior_controller_therapy",
         "qualifying_eosinophil_result",
-        "recent_exacerbation_history",
     ):
         if req_id in known:
             continue
@@ -106,12 +105,12 @@ def _evaluation_for(supported_map: dict[str, list[str]]) -> PolicyEvaluation:
             RequirementEvaluation(
                 requirement_id=req_id,
                 title=req_id,
-                status=STATUS_NOT_ESTABLISHED,
+                status=STATUS_NEEDS_REVIEW,
                 explanation="",
                 suggested_document_types=["relevant clinical document"],
-                accepted_candidate_ids=[],
-                review_candidate_ids=[],
-                rejected_candidate_ids=[],
+                support_candidate_ids=[],
+                insufficient_candidate_ids=[],
+                contradiction_candidate_ids=[],
             )
         )
     return PolicyEvaluation(
@@ -120,7 +119,7 @@ def _evaluation_for(supported_map: dict[str, list[str]]) -> PolicyEvaluation:
         disclaimer="FICTIONAL",
         as_of_date=date(2025, 11, 1),
         logic="AND",
-        overall_status=STATUS_SUPPORTED,
+        overall_status=STATUS_READY,
         requirements=requirements,
         candidate_verdicts=[],
     )

@@ -38,19 +38,19 @@ def test_upload_and_list_documents(tmp_path: Path) -> None:
     db.close()
 
     specs = generate_seed_pdfs(tmp_path)
-    lab = next(s for s in specs if s["filename"] == "lab_eosinophils.pdf")
+    note = next(s for s in specs if s["filename"] == "pulmonary_consult_note.pdf")
 
-    with lab["path"].open("rb") as f:
+    with note["path"].open("rb") as f:
         response = client.post(
             f"/api/patients/{PATIENT_ID}/documents",
-            files={"file": ("lab_eosinophils.pdf", f, "application/pdf")},
-            data={"document_type": "laboratory_report", "source_label": "Lab EOS"},
+            files={"file": ("pulmonary_consult_note.pdf", f, "application/pdf")},
+            data={"document_type": "clinical_note", "source_label": "Consult note"},
         )
 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["page_count"] >= 1
-    assert body["document_type"] == "laboratory_report"
+    assert body["document_type"] == "clinical_note"
 
     listed = client.get(f"/api/patients/{PATIENT_ID}/documents")
     assert listed.status_code == 200
@@ -60,7 +60,7 @@ def test_upload_and_list_documents(tmp_path: Path) -> None:
     assert detail.status_code == 200
     pages = detail.json()["pages"]
     assert pages[0]["page_number"] == 1
-    assert "eosinophil" in pages[0]["text"].lower()
+    assert "asthma" in pages[0]["text"].lower()
 
     file_response = client.get(
         f"/api/patients/{PATIENT_ID}/documents/{body['id']}/file"
@@ -114,12 +114,12 @@ def test_upload_without_document_type_is_blank(tmp_path: Path) -> None:
     db.close()
 
     specs = generate_seed_pdfs(tmp_path)
-    lab = next(s for s in specs if s["filename"] == "lab_eosinophils.pdf")
+    note = next(s for s in specs if s["filename"] == "pulmonary_consult_note.pdf")
 
-    with lab["path"].open("rb") as f:
+    with note["path"].open("rb") as f:
         response = client.post(
             f"/api/patients/{PATIENT_ID}/documents",
-            files={"file": ("lab_eosinophils.pdf", f, "application/pdf")},
+            files={"file": ("pulmonary_consult_note.pdf", f, "application/pdf")},
         )
 
     assert response.status_code == 200, response.text

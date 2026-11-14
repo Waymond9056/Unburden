@@ -32,11 +32,13 @@ SYNTHETIC_PATH = ROOT / "benchmarks" / "nli_support_benchmark.json"
 SEED = 42
 
 LABEL_MAP = {
-    "Entailment": "entailment",
+    "Entailment": "support",
     "Contradiction": "contradiction",
-    "entailment": "entailment",
+    "entailment": "support",
     "contradiction": "contradiction",
-    "neutral": "neutral",
+    "neutral": "insufficient",
+    "support": "support",
+    "insufficient": "insufficient",
 }
 
 

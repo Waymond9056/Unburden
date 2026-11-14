@@ -110,60 +110,6 @@ def generate_seed_pdfs(seed_dir: Path | None = None) -> list[dict]:
                 ),
             ],
         },
-        {
-            "filename": "lab_eosinophils.pdf",
-            "document_type": "laboratory_report",
-            "source_label": "Laboratory Report — Absolute Blood Eosinophils",
-            "scenario_tag": "A,C",
-            "title": "Laboratory Report: Absolute Eosinophil Count",
-            "paragraphs": [
-                "Collection date: 2025-08-21. Specimen: whole blood.",
-                (
-                    "Absolute eosinophil count: 420 cells/µL (reference range 0–500). "
-                    "Result qualifies under the fictional example policy threshold of "
-                    "≥300 cells/µL within the prior 12 months."
-                ),
-                "Ordering clinician: Dr. Morgan Lee, Pulmonology.",
-            ],
-        },
-        {
-            "filename": "duplicate_consult_summary.pdf",
-            "document_type": "clinical_note",
-            "source_label": "Duplicate Consult Summary — overlapping content",
-            "scenario_tag": "C",
-            "title": "Visit Summary (Overlapping Content)",
-            "paragraphs": [
-                "Date: 2025-09-20. This note restates prior findings for Scenario C.",
-                (
-                    "Diagnosis reiterated: severe persistent asthma. Controller therapy "
-                    "with fluticasone-salmeterol again documented. No new laboratory values."
-                ),
-                (
-                    "Purpose: redundant documentation to test packet optimization and "
-                    "avoid unnecessary document selection."
-                ),
-            ],
-        },
-        {
-            "filename": "misleading_allergy_note.pdf",
-            "document_type": "clinical_note",
-            "source_label": "Allergy Clinic Note — nonqualifying similar language",
-            "scenario_tag": "C",
-            "title": "Allergy Clinic Note (Nonqualifying Evidence)",
-            "paragraphs": [
-                "Date of service: 2025-07-08.",
-                (
-                    "Patient has seasonal allergic rhinitis. Inhaled corticosteroid spray "
-                    "for nasal symptoms was discussed. No systemic corticosteroid "
-                    "exacerbation treatment occurred at this visit."
-                ),
-                (
-                    "Eosinophils mentioned qualitatively as 'borderline elevated historically' "
-                    "without a dated quantitative laboratory value. This note should not "
-                    "alone establish the fictional lab requirement."
-                ),
-            ],
-        },
     ]
 
     created = []

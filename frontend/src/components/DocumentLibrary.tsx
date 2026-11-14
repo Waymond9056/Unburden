@@ -41,7 +41,7 @@ export function DocumentLibrary({
     <section className="flex h-full min-h-0 flex-col">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl text-ink">Document library</h2>
+          <h2 className="font-display text-2xl text-ink">Documents</h2>
          
         </div>
         <label

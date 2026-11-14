@@ -23,15 +23,27 @@ function statusLabel(value: string) {
 
 function statusStyles(status: string) {
   switch (status) {
+    case "support":
     case "accepted":
       return "border-[#1b7a6d]/50 bg-[#e7f6f2] text-[#0f5a51]";
+    case "insufficient":
     case "needs_review":
       return "border-[#c48a2e]/45 bg-[#fff6e8] text-[#8a6230]";
+    case "contradiction":
     case "rejected":
       return "border-[#b45656]/40 bg-[#fbeaea] text-[#8f3d3d]";
     default:
       return "border-line bg-mist/60 text-ink-soft";
   }
+}
+
+function citationStatus(candidate: EvidenceCandidate) {
+  return (
+    candidate.display_status ||
+    candidate.clinician_override ||
+    candidate.model_status ||
+    candidate.verification_status
+  );
 }
 
 export function EvidenceCandidates({
@@ -45,10 +57,7 @@ export function EvidenceCandidates({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl text-ink">Requirement evidence</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted">
-            Passages retrieved for the fictional policy, labeled with their
-            verification status.
-          </p>
+        
         </div>
         <div className="text-sm text-muted">
           {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
@@ -78,9 +87,9 @@ export function EvidenceCandidates({
                     className="flex min-w-0 flex-col border border-line bg-paper/55 p-4"
                   >
                     <span
-                      className={`self-start border px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(candidate.verification_status)}`}
+                      className={`self-start border px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(citationStatus(candidate))}`}
                     >
-                      {statusLabel(candidate.verification_status)}
+                      {statusLabel(citationStatus(candidate))}
                     </span>
                     <blockquote className="mt-3 flex-1 border-l-2 border-accent/45 pl-3 text-sm leading-6 text-ink-soft">
                       “{candidate.supporting_quote}”

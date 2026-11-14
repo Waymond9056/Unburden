@@ -15,9 +15,6 @@ from app.services.seed import generate_seed_pdfs
         "pulmonary_consult_note.pdf",
         "medication_history.pdf",
         "exacerbation_er_note.pdf",
-        "lab_eosinophils.pdf",
-        "duplicate_consult_summary.pdf",
-        "misleading_allergy_note.pdf",
     ],
 )
 def test_retrieved_candidates_keep_exact_page_citations(
