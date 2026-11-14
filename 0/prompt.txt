@@ -1,0 +1,100 @@
+build this now
+
+---
+
+can we try this model and compare the results
+
+---
+
+yep, can we try using the two together and comparing all 3 results?
+
+---
+
+what about this
+
+Use DeBERTa as a negation / high-precision support signal next to Milestone 3 math (which we just hardened).
+
+---
+
+can you make the DeBERTa as precision/negation signal + hardened Milestone 3 math is the architecture model and test its accuracy? or did you arleady do that
+
+---
+
+nice, so M3 + DeBERTa is the best
+
+---
+
+My suggestion for Unburden
+Use TREC Clinical Trials (#1) to pressure-test and calibrate the DeBERTa support-signal at low effort right now (it's free-form criteria text + patient text + a 3-level label, ready today). If you want something domain-truer and have time to wait on a DUA, request n2c2 2018 Track 1 (#2) in parallel — it won't block the hackathon but could validate the approach against real EHR text afterward. Use CMS's coverage database (#3) opportunistically to make the fictional policy's wording more realistic.
+
+Want me to pull a small sample from the TREC Clinical Trials dataset and turn it into a few more rows for the §4 eval set in the research doc?
+
+I think the clear next step is to try to improve our model one more time. we should
+1. train on real data like this
+2. improve our model on real data like this
+so turn this into a train test split and get the TREC dataset, since our model is only working on generated test rn
+
+---
+
+is everything going to plan?
+
+---
+
+why did this fail? is there any way we can utilize this TREC still?
+
+---
+
+I searched Hugging Face dataset listings, the n2c2/i2b2 shared-task registry, and CMS's public coverage database (not just recalling from memory — checked live license/access status on each). Bottom line: **there's no public dataset that pairs real clinical documents directly with real insurance prior-authorization requirement sentences and labeled outcomes** — makes sense, since insurers don't publish PA decisions paired with chart text (privacy + commercial sensitivity). But there are real, structurally-identical proxies. Ranked by how "simple" they are to actually use:
+
+### 1. TREC Clinical Trials (2021–2023) — best fit, zero friction
+`araag2/TREC_Clinical-Trials` on Hugging Face (CC-BY-SA 4.0, no login/DUA needed, one-line download).
+
+Structure is almost exactly our problem shape:
+- `Patient` — a patient case narrative (synthetic vignette, written by medical professionals for the track)
+- `Eligibility` — real clinical-trial eligibility criteria text pulled from clinicaltrials.gov (numeric thresholds, temporal windows, concept criteria — e.g. "HbA1c between 6.5% and 9.5%," "diagnosed within the past 6 months")
+- `Label` — TREC relevance judgment: `2 = eligible`, `1 = excluded` (relevant patient, but this criterion rules them out), `0 = not relevant`
+
+That maps cleanly onto our support/contradict/neutral framing (2→support, 1→contradict-ish, 0→neutral/off-topic). ~35K labeled pairs for 2021 alone.
+
+```python
+from datasets import load_dataset
+ds = load_dataset("araag2/TREC_Clinical-Trials", "2021_processed")
+```
+
+Caveat: "Patient" text is a written vignette, not a real EHR excerpt or lab report, and criteria are clinical-trial eligibility, not insurance policy language — so it's a proxy for calibration/stress-testing, not a perfect domain match.
+
+### 2. n2c2 2018 Track 1 ("Cohort Selection for Clinical Trials") — closest real match, but gated
+This is the dataset I'd actually call the best conceptual analog: **real de-identified longitudinal EHR notes** (288 patients) scored against **13 structured selection criteria** (e.g. `HBA1C`, `CREATININE`, `ADVANCED-CAD`, `KETO-1YR`) with **met/not-met** document-level labels — explicitly requiring "measurement detection, inference, and temporal reasoning," i.e. the exact same ingredients as Unburden's requirements. Mirrored on HF as `bigbio/n2c2_2018_track1`, but it's `bigbio_public: False` — access requires a data use agreement through the Harvard DBMI n2c2 portal (`portal.dbmi.hms.harvard.edu/projects/n2c2-nlp`). Free for research, but not instant — worth starting the request now if you want it, not something to rely on for a hackathon deadline.
+
+### 3. CMS Medicare Coverage Database — real insurance text, no DUA, but one-sided
+`api.coverage.cms.gov` / `cms.gov/medicare-coverage-database` is fully public (confirmed live, no account needed). It has real National/Local Coverage Determination documents — actual insurer-style requirement language (e.g. documentation thresholds, diagnosis codes, prior-therapy requirements). No patient documents paired with it, so it's only useful for the *policy* side — e.g. to write a more realistic fictional policy, or to harvest real phrasing patterns for your `must_match_any`/hypothesis templates — not as a labeled training/eval set on its own.
+
+### 4. MedNLI — already covered in the earlier report
+Public HF mirrors exist ungated (`bigbio/mednli`), but the **official** distribution requires PhysioNet credentialing; the mirrors' licensing compliance is unclear, so I wouldn't redistribute training on them without checking provenance. Useful mainly as general clinical-sentence entailment practice, not insurance-specific.
+
+### My suggestion for Unburden
+Use **TREC Clinical Trials (#1)** to pressure-test and calibrate the DeBERTa support-signal at low effort right now (it's free-form criteria text + patient text + a 3-level label, ready today). If you want something domain-truer and have time to wait on a DUA, request **n2c2 2018 Track 1 (#2)** in parallel — it won't block the hackathon but could validate the approach against real EHR text afterward. Use CMS's coverage database (#3) opportunistically to make the fictional policy's wording more realistic.
+
+Want me to pull a small sample from the TREC Clinical Trials dataset and turn it into a few more rows for the §4 eval set in the research doc?
+
+is there another one of these datasets that can actually help us?
+
+---
+
+what does "calibrate contradiction/entailment thresholds" mean
+
+---
+
+i like that, this uses TREC in a meaningful way that it is also good at
+
+---
+
+go for it
+
+---
+
+summarize what we just worked on. so the overall best model os M3 + Deberta as our model with TREC as a calibration cutoff measure? is it also used for validation data?
+
+---
+
+nice, are we done? if so, lets commit push and ill PR this into the main
