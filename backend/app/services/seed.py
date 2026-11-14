@@ -9,7 +9,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.db import Document, DocumentPage, Observation, Patient
+from app.models.db import Document, DocumentPage, EvidenceCandidate, Patient
 from app.services.documents import store_and_index_pdf
 
 settings = get_settings()
@@ -171,14 +171,14 @@ def generate_seed_pdfs(seed_dir: Path | None = None) -> list[dict]:
 
 
 def reset_patient_data(db: Session, patient_id: str = PATIENT_ID) -> None:
-    """Remove existing documents/observations for a clean seed."""
+    """Remove existing documents/evidence candidates for a clean seed."""
     docs = db.query(Document).filter(Document.patient_id == patient_id).all()
     for doc in docs:
         path = Path(doc.storage_path)
         if path.exists():
             path.unlink()
         db.query(DocumentPage).filter(DocumentPage.document_id == doc.id).delete()
-        db.query(Observation).filter(Observation.document_id == doc.id).delete()
+        db.query(EvidenceCandidate).filter(EvidenceCandidate.document_id == doc.id).delete()
         db.delete(doc)
     db.commit()
 

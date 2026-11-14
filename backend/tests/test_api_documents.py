@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
 from app.main import app
+from app.models.db import DocumentPage, EvidenceCandidate
 from app.services.seed import PATIENT_ID, ensure_seed_patient, generate_seed_pdfs
 
 
@@ -67,6 +68,44 @@ def test_upload_and_list_documents(tmp_path: Path) -> None:
     assert file_response.status_code == 200
     assert file_response.headers["content-type"].startswith("application/pdf")
     assert file_response.content[:4] == b"%PDF"
+
+    candidates_response = client.get(f"/api/patients/{PATIENT_ID}/evidence-candidates")
+    assert candidates_response.status_code == 200
+    lab_candidates = [
+        item
+        for item in candidates_response.json()
+        if item["document_id"] == body["id"]
+    ]
+    assert len(lab_candidates) == 1
+    candidate = lab_candidates[0]
+    assert candidate["requirement_id"] == "qualifying_eosinophil_result"
+    assert candidate["extracted_details"]["numeric_mentions"] == ["420 cells/µL"]
+    assert candidate["source_page"] == 1
+    assert candidate["source_document_name"] == "Lab EOS"
+    assert candidate["verification_status"] == "unverified_candidate"
+
+    db = TestingSessionLocal()
+    page = (
+        db.query(DocumentPage)
+        .filter(
+            DocumentPage.document_id == body["id"],
+            DocumentPage.page_number == candidate["source_page"],
+        )
+        .one()
+    )
+    stored = db.query(EvidenceCandidate).filter(EvidenceCandidate.id == candidate["id"]).one()
+    assert stored.supporting_quote in page.text
+    db.close()
+
+    filtered = client.get(
+        f"/api/patients/{PATIENT_ID}/evidence-candidates",
+        params={"requirement_id": "qualifying_eosinophil_result"},
+    )
+    assert filtered.status_code == 200
+    assert all(
+        item["requirement_id"] == "qualifying_eosinophil_result"
+        for item in filtered.json()
+    )
 
 
 def test_upload_without_document_type_is_blank(tmp_path: Path) -> None:

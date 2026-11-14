@@ -18,7 +18,7 @@ class Patient(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     documents: Mapped[list[Document]] = relationship(back_populates="patient", cascade="all, delete-orphan")
-    observations: Mapped[list[Observation]] = relationship(
+    evidence_candidates: Mapped[list[EvidenceCandidate]] = relationship(
         back_populates="patient", cascade="all, delete-orphan"
     )
 
@@ -41,7 +41,9 @@ class Document(Base):
     pages: Mapped[list[DocumentPage]] = relationship(
         back_populates="document", cascade="all, delete-orphan", order_by="DocumentPage.page_number"
     )
-    observations: Mapped[list[Observation]] = relationship(back_populates="document")
+    evidence_candidates: Mapped[list[EvidenceCandidate]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
 
 
 class DocumentPage(Base):
@@ -56,27 +58,23 @@ class DocumentPage(Base):
     document: Mapped[Document] = relationship(back_populates="pages")
 
 
-class Observation(Base):
-    """Placeholder schema for Milestone 2 structured extraction."""
+class EvidenceCandidate(Base):
+    """An exact source passage retrieved for one policy requirement."""
 
-    __tablename__ = "observations"
+    __tablename__ = "evidence_candidates"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     patient_id: Mapped[str] = mapped_column(ForeignKey("patients.id", ondelete="CASCADE"), index=True)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
-    concept_type: Mapped[str] = mapped_column(String(128), nullable=False)
-    concept_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    value_text: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    value_numeric: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    value_units: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    event_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    interval_start: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    interval_end: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    policy_id: Mapped[str] = mapped_column(String(128), index=True)
+    requirement_id: Mapped[str] = mapped_column(String(128), index=True)
     source_page: Mapped[int] = mapped_column(Integer, nullable=False)
     supporting_quote: Mapped[str] = mapped_column(Text, nullable=False)
-    uncertainty: Mapped[str] = mapped_column(String(64), default="unverified")
-    review_status: Mapped[str] = mapped_column(String(64), default="pending_review")
+    extracted_details_json: Mapped[str] = mapped_column(Text, default="{}")
+    relevance_score: Mapped[float] = mapped_column(Float, default=0.0)
+    retrieval_method: Mapped[str] = mapped_column(String(64), default="lexical")
+    verification_status: Mapped[str] = mapped_column(String(64), default="unverified_candidate")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    patient: Mapped[Patient] = relationship(back_populates="observations")
-    document: Mapped[Document] = relationship(back_populates="observations")
+    patient: Mapped[Patient] = relationship(back_populates="evidence_candidates")
+    document: Mapped[Document] = relationship(back_populates="evidence_candidates")

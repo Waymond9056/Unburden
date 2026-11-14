@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -7,15 +8,17 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.db import Observation, Patient
+from app.models.db import EvidenceCandidate, Patient
 from app.models.schemas import (
     DocumentDetail,
     DocumentSummary,
-    ObservationOut,
+    EvidenceCandidateOut,
     PageText,
     PatientOut,
 )
 from app.services import documents as document_service
+from app.services.evidence_retrieval import retrieve_for_patient
+from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -96,14 +99,60 @@ def download_document_file(
     )
 
 
-@router.get("/{patient_id}/observations", response_model=list[ObservationOut])
-def list_observations(patient_id: str, db: Session = Depends(get_db)) -> list[Observation]:
-    document_service.ensure_patient(db, patient_id)
-    return (
-        db.query(Observation)
-        .filter(Observation.patient_id == patient_id)
-        .order_by(Observation.created_at.desc())
-        .all()
+def _candidate_out(candidate: EvidenceCandidate) -> EvidenceCandidateOut:
+    requirement = REQUIREMENTS_BY_ID[candidate.requirement_id]
+    return EvidenceCandidateOut(
+        id=candidate.id,
+        patient_id=candidate.patient_id,
+        document_id=candidate.document_id,
+        policy_id=candidate.policy_id,
+        requirement_id=candidate.requirement_id,
+        requirement_title=requirement.title,
+        source_page=candidate.source_page,
+        supporting_quote=candidate.supporting_quote,
+        extracted_details=json.loads(candidate.extracted_details_json),
+        relevance_score=candidate.relevance_score,
+        retrieval_method=candidate.retrieval_method,
+        verification_status=candidate.verification_status,
+        created_at=candidate.created_at,
+        source_document_name=(
+            candidate.document.source_label or candidate.document.original_filename
+        ),
+        source_document_type=candidate.document.document_type,
     )
+
+
+@router.get("/{patient_id}/evidence-candidates", response_model=list[EvidenceCandidateOut])
+def list_evidence_candidates(
+    patient_id: str,
+    requirement_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[EvidenceCandidateOut]:
+    document_service.ensure_patient(db, patient_id)
+    query = db.query(EvidenceCandidate).filter(
+        EvidenceCandidate.patient_id == patient_id,
+        EvidenceCandidate.policy_id == FICTIONAL_POLICY_ID,
+    )
+    if requirement_id:
+        if requirement_id not in REQUIREMENTS_BY_ID:
+            raise HTTPException(status_code=404, detail="Policy requirement not found")
+        query = query.filter(EvidenceCandidate.requirement_id == requirement_id)
+    candidates = query.order_by(
+        EvidenceCandidate.requirement_id,
+        EvidenceCandidate.relevance_score.desc(),
+        EvidenceCandidate.created_at,
+    ).all()
+    return [_candidate_out(candidate) for candidate in candidates]
+
+
+@router.post("/{patient_id}/evidence-candidates/retrieve", response_model=list[EvidenceCandidateOut])
+def retrieve_evidence_candidates(
+    patient_id: str, db: Session = Depends(get_db)
+) -> list[EvidenceCandidateOut]:
+    document_service.ensure_patient(db, patient_id)
+    return [
+        _candidate_out(candidate)
+        for candidate in retrieve_for_patient(db, patient_id)
+    ]
 
 

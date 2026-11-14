@@ -1,4 +1,9 @@
-import type { DocumentDetail, DocumentSummary, Patient } from "./types";
+import type {
+  DocumentDetail,
+  DocumentSummary,
+  EvidenceCandidate,
+  Patient,
+} from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
@@ -32,6 +37,12 @@ export function listDocuments(patientId: string) {
 export function getDocument(patientId: string, documentId: string) {
   return request<DocumentDetail>(
     `/api/patients/${patientId}/documents/${documentId}`,
+  );
+}
+
+export function listEvidenceCandidates(patientId: string) {
+  return request<EvidenceCandidate[]>(
+    `/api/patients/${patientId}/evidence-candidates`,
   );
 }
 

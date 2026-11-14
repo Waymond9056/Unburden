@@ -1,3 +1,3 @@
-from app.models.db import Document, DocumentPage, Observation, Patient
+from app.models.db import Document, DocumentPage, EvidenceCandidate, Patient
 
-__all__ = ["Patient", "Document", "DocumentPage", "Observation"]
+__all__ = ["Patient", "Document", "DocumentPage", "EvidenceCandidate"]

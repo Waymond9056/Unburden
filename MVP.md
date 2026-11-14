@@ -56,25 +56,28 @@ When a document is uploaded:
 
 1. Store the original document.
 2. Extract its text, preserving page boundaries.
-3. Extract clinically relevant structured observations with an LLM.
-4. Store those observations with their source document, page, and supporting text.
-5. Make the observations available to the evidence engine.
+3. Compare its page text with the active policy requirements.
+4. Retrieve passages potentially relevant to each requirement.
+5. Store those candidates with the requirement ID, document ID, page, and exact quotation.
 
-Clinical observations might include diagnoses, medications, previous treatment trials, laboratory measurements, hospital visits, and relevant dates.
+Extract dates, medications, doses, laboratory values, or other details only when they
+are needed to evaluate the matched policy requirement.
 
-Represent each observation with a schema containing:
+Represent each evidence candidate with a schema containing:
 
-- Clinical concept or event type.
-- Extracted value and units, where relevant.
-- Date or applicable time interval.
+- Policy and requirement identifiers.
+- Requirement-specific details, where relevant.
 - Document identifier.
 - Source page.
 - Exact supporting quotation.
-- Extraction uncertainty or review status.
+- Retrieval method, score, and verification status.
 
-Do not treat extracted text as automatically verified clinical truth.
+Do not treat a retrieved candidate as evidence that satisfies a requirement. Candidate
+retrieval and policy verification are separate stages.
 
-Preserve original documents even when their information overlaps. We are not building global medical history reconciliation or deduplication for this MVP.
+Preserve original documents even when their information overlaps. Do not build a
+general-purpose medical history, global clinical event reconciliation, or observation
+database for this MVP.
 
 ## 4. The core innovation: Evidence engine
 
@@ -84,12 +87,12 @@ The engine receives:
 
 **Input A:** A structured insurance policy containing documentation requirements.
 
-**Input B:** A patient's available medical documents and extracted clinical observations.
+**Input B:** A patient's available medical documents and requirement-linked evidence candidates.
 
 It produces:
 
 - The requirements supported by available evidence.
-- Supporting clinical observations and exact document citations.
+- Supporting evidence candidates and exact document citations.
 - Requirements not established by available records.
 - Ambiguous or contradictory evidence requiring review.
 - A proposed selection of documents for an insurance evidence packet.
@@ -113,7 +116,7 @@ Do not build automatic insurance policy parsing in the initial version.
 
 ### 4.2 Evidence retrieval
 
-For each policy requirement, retrieve potentially relevant clinical observations from all available documents.
+For each policy requirement, retrieve potentially relevant passages directly from all available document pages.
 
 Use semantic matching where appropriate, but make sure evidence is not accepted merely because it contains related keywords.
 
@@ -184,7 +187,7 @@ Do not assume an unknown external document exists.
 
 When another document is uploaded:
 
-1. Extract and store the new observations.
+1. Retrieve and store new requirement-linked evidence candidates.
 2. Reevaluate the affected policy requirements.
 3. Update the evidence matches and proposed packet.
 4. Show which requirements changed status.
@@ -202,12 +205,12 @@ The main dashboard should include:
 - Uploaded documents.
 - Source name and upload date.
 - PDF preview.
-- Extracted clinical observations.
+- Extracted page text.
 
 **Insurance requirements**
 - A list of documentation requirements.
 - Supported / Not Established / Needs Review statuses.
-- Supporting observations.
+- Supporting evidence candidates.
 - Clickable source citations linking to the original PDF page.
 
 **Evidence packet**
@@ -276,7 +279,9 @@ Start with these conceptual endpoints, adjusting the implementation if needed:
 
 - POST /patients/{id}/documents
 - GET /patients/{id}/documents
-- GET /patients/{id}/observations
+- GET /policies/{id}/requirements
+- GET /patients/{id}/evidence-candidates
+- POST /patients/{id}/evidence-candidates/retrieve
 - GET /patients/{id}/policy-evaluation
 - POST /patients/{id}/evaluate
 - GET /patients/{id}/evidence-packet
@@ -305,11 +310,14 @@ Implement in this order:
 
 **Milestone 1:** Project scaffolding, database schema, PDF upload, text extraction, and synthetic seed documents.
 
-**Milestone 1.5:** Working clinician frontend against current APIs so features can be tested as they land. Includes document library, PDF upload, extracted-text + PDF preview, and placeholder panels for observations, policy checklist, and evidence packet (filled in by later milestones).
+**Milestone 1.5:** Working clinician frontend against current APIs so features can be tested as they land. Includes document library, PDF upload, extracted-text + PDF preview, and placeholder panels for evidence candidates, policy checklist, and evidence packet (filled in by later milestones).
 
-**Milestone 2:** Structured clinical observation extraction with persistent source citations (wire into the observations panel).
+**Milestone 2:** Document indexing and source-backed evidence retrieval. Given a
+specific policy requirement, retrieve potentially relevant passages, extract only the
+details needed to evaluate that requirement, and persist exact source citations. Do not
+build a general-purpose clinical observation system or observations panel.
 
-**Milestone 3:** Structured insurance policy representation and evidence retrieval/verification engine (wire into the requirements checklist).
+**Milestone 3:** Structured policy constraints and evidence candidate verification engine (wire into the requirements checklist).
 
 **Milestone 4:** Document selection optimization and missing-evidence checklist (wire into the evidence packet / missing-info panels).
 
@@ -346,7 +354,9 @@ Prioritize a working backend and evidence engine over visual polish. Avoid imple
 
 Use environment variables for model API credentials, provide an .env.example, and include clear local setup instructions.
 
-If no LLM credentials are configured, make the synthetic fixtures usable through deterministic pre-extracted observations so the demo and core algorithm remain testable.
+If no LLM credentials are configured, keep retrieval and the synthetic demo deterministic
+so the evidence engine remains testable. Start with straightforward text retrieval; add
+embeddings only if evaluation shows that relevant passages are being missed.
 
 The most important principle:
 

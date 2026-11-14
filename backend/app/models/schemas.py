@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -32,23 +32,29 @@ class PatientOut(BaseModel):
     created_at: datetime
 
 
-class ObservationOut(BaseModel):
+class PolicyRequirementOut(BaseModel):
+    id: str
+    policy_id: str
+    title: str
+    description: str
+
+
+class EvidenceCandidateOut(BaseModel):
     id: str
     patient_id: str
     document_id: str
-    concept_type: str
-    concept_code: Optional[str] = None
-    value_text: Optional[str] = None
-    value_numeric: Optional[float] = None
-    value_units: Optional[str] = None
-    event_date: Optional[date] = None
-    interval_start: Optional[date] = None
-    interval_end: Optional[date] = None
+    policy_id: str
+    requirement_id: str
+    requirement_title: str
     source_page: int
     supporting_quote: str
-    uncertainty: str
-    review_status: str
+    extracted_details: dict[str, Any] = Field(default_factory=dict)
+    relevance_score: float
+    retrieval_method: str
+    verification_status: str
     created_at: datetime
+    source_document_name: Optional[str] = None
+    source_document_type: Optional[str] = None
 
 
 class HealthResponse(BaseModel):

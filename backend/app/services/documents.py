@@ -77,6 +77,12 @@ def store_and_index_pdf(
         )
     db.commit()
     db.refresh(document)
+
+    # Retrieve only passages relevant to configured policy requirements. This
+    # deliberately does not construct a general-purpose medical history.
+    from app.services.evidence_retrieval import retrieve_for_document
+
+    retrieve_for_document(db, document)
     return document
 
 

@@ -6,26 +6,36 @@ import {
   getDocument,
   getPatient,
   listDocuments,
+  listEvidenceCandidates,
   reseedDemo,
   uploadDocument,
 } from "@/lib/api";
-import type { DocumentDetail, DocumentSummary, Patient } from "@/lib/types";
+import type {
+  DocumentDetail,
+  DocumentSummary,
+  EvidenceCandidate,
+  Patient,
+} from "@/lib/types";
+import { EvidenceCandidates } from "./EvidenceCandidates";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { DocumentViewer } from "./DocumentViewer";
 import { PlaceholderPanel } from "./PlaceholderPanel";
 
 const DEFAULT_PATIENT_ID = "patient-raymond-yao";
 const STACKED_LAYOUT = "(max-width: 1023px)";
+type WorkspaceTab = "documents" | "evidence";
 
 export function Dashboard() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
+  const [evidenceCandidates, setEvidenceCandidates] = useState<EvidenceCandidate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<DocumentDetail | null>(null);
   const [failedDocId, setFailedDocId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("documents");
   const [showViewerOnMobile, setShowViewerOnMobile] = useState(false);
   const libraryRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -37,12 +47,14 @@ export function Dashboard() {
     Boolean(selectedId) && !visibleDoc && failedDocId !== selectedId;
 
   async function refreshLibrary(selectId?: string | null) {
-    const [nextPatient, nextDocs] = await Promise.all([
+    const [nextPatient, nextDocs, nextCandidates] = await Promise.all([
       getPatient(DEFAULT_PATIENT_ID),
       listDocuments(DEFAULT_PATIENT_ID),
+      listEvidenceCandidates(DEFAULT_PATIENT_ID),
     ]);
     setPatient(nextPatient);
     setDocuments(nextDocs);
+    setEvidenceCandidates(nextCandidates);
     const nextSelected =
       selectId === undefined
         ? (nextDocs[0]?.id ?? null)
@@ -106,7 +118,7 @@ export function Dashboard() {
     if (!window.matchMedia(STACKED_LAYOUT).matches) return;
     const node = intent === "viewer" ? viewerRef.current : libraryRef.current;
     node?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [showViewerOnMobile, selectedId]);
+  }, [activeTab, showViewerOnMobile, selectedId]);
 
   function handleSelect(id: string) {
     const alreadyShowing =
@@ -125,6 +137,14 @@ export function Dashboard() {
   function handleBackToLibrary() {
     scrollIntent.current = "library";
     setShowViewerOnMobile(false);
+  }
+
+  function handleOpenEvidenceSource(id: string) {
+    scrollIntent.current = "viewer";
+    setActiveTab("documents");
+    setFailedDocId(null);
+    setSelectedId(id);
+    setShowViewerOnMobile(true);
   }
 
   async function handleUpload(file: File) {
@@ -169,16 +189,11 @@ export function Dashboard() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8">
       <header className="mb-8">
-        <p className="text-xs uppercase tracking-[0.22em] text-muted">
-          Prior authorization evidence engine
-        </p>
+ 
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl text-ink">Unburden</h1>
-            <p className="mt-3 max-w-xl text-base leading-7 text-ink-soft">
-              Review source documents, verify extracted evidence, and assemble a
-              compact packet for insurance review.
-            </p>
+            <h1 className="font-display text-5xl text-ink">Unburden</h1>
+
           </div>
           <div className="flex flex-col items-start gap-1 sm:items-end">
             <button
@@ -195,15 +210,11 @@ export function Dashboard() {
 
       {patient && (
         <div className="mb-6 border-y border-line/80 py-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted">
-            Patient
-          </p>
+        
           <p className="mt-1 font-display text-2xl text-ink">
             {patient.display_name}
           </p>
-          <p className="text-sm text-muted">
-            DOB {patient.date_of_birth ?? "—"} · id {patient.id}
-          </p>
+     
         </div>
       )}
 
@@ -213,10 +224,56 @@ export function Dashboard() {
         </div>
       )}
 
+      <div
+        role="tablist"
+        aria-label="Unburden workspace"
+        className="mb-8 flex border-b border-line"
+      >
+        <button
+          type="button"
+          role="tab"
+          id="documents-tab"
+          aria-selected={activeTab === "documents"}
+          aria-controls="documents-panel"
+          onClick={() => setActiveTab("documents")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+            activeTab === "documents"
+              ? "border-accent text-ink"
+              : "border-transparent text-muted hover:border-line hover:text-ink-soft"
+          }`}
+        >
+          Documents
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="evidence-tab"
+          aria-selected={activeTab === "evidence"}
+          aria-controls="evidence-panel"
+          onClick={() => setActiveTab("evidence")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+            activeTab === "evidence"
+              ? "border-accent text-ink"
+              : "border-transparent text-muted hover:border-line hover:text-ink-soft"
+          }`}
+        >
+          Requirement evidence
+          {evidenceCandidates.length > 0 && (
+            <span className="ml-2 bg-mist px-2 py-0.5 text-xs text-ink-soft">
+              {evidenceCandidates.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {bootLoading ? (
         <p className="text-sm text-muted">Loading workspace…</p>
-      ) : (
-        <>
+      ) : activeTab === "documents" ? (
+        <div
+          role="tabpanel"
+          id="documents-panel"
+          aria-labelledby="documents-tab"
+        >
           <div className="grid min-h-[520px] gap-8 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
             <div
               ref={libraryRef}
@@ -252,13 +309,20 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-
-          <div className="mt-10 grid gap-8 md:grid-cols-3">
-            <PlaceholderPanel
-              title="Clinical observations"
-              milestone="Milestone 2"
-              description="Structured findings with source citations will appear here after extraction lands."
-            />
+        </div>
+      ) : (
+        <div
+          role="tabpanel"
+          id="evidence-panel"
+          aria-labelledby="evidence-tab"
+        >
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <EvidenceCandidates
+                candidates={evidenceCandidates}
+                onOpenSource={handleOpenEvidenceSource}
+              />
+            </div>
             <PlaceholderPanel
               title="Insurance requirements"
               milestone="Milestone 3"
@@ -270,7 +334,7 @@ export function Dashboard() {
               description="Optimized document selection and missing-evidence guidance will show here."
             />
           </div>
-        </>
+        </div>
       )}
     </div>
   );

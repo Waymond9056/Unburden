@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
@@ -39,3 +39,10 @@ def init_db() -> None:
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    # Milestone 2 was narrowed from general clinical observation extraction to
+    # policy-driven evidence retrieval. Remove only that obsolete derived table;
+    # original PDFs, page text, and requirement-linked candidates are preserved.
+    if inspect(engine).has_table("observations"):
+        with engine.begin() as connection:
+            connection.exec_driver_sql("DROP TABLE observations")

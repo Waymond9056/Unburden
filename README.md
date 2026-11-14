@@ -8,7 +8,7 @@ Unburden turns messy medical PDFs into a source-verifiable insurance evidence pa
 
 - **Frontend:** Next.js, React, TypeScript, Tailwind CSS
 - **Backend:** FastAPI, Pydantic, SQLAlchemy, SQLite, PyMuPDF
-- **LLM:** Configurable OpenAI-compatible API (used from Milestone 2)
+- **LLM:** Configurable OpenAI-compatible API with deterministic demo fallback
 
 ## Project layout
 
@@ -31,7 +31,7 @@ MVP.md            Full product / milestone spec
 ```bash
 # 1) Environment
 cp .env.example .env
-# Add LLM_API_KEY when you reach Milestone 2
+# LLM_API_KEY is optional and reserved for later candidate verification
 
 # 2) Backend
 cd backend
@@ -74,16 +74,26 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | GET | `/api/patients/{id}/documents` | List documents |
 | GET | `/api/patients/{id}/documents/{doc_id}` | Document + page text |
 | GET | `/api/patients/{id}/documents/{doc_id}/file` | Original PDF (inline preview) |
-| GET | `/api/patients/{id}/observations` | Observations (empty until M2) |
+| GET | `/api/policies/{id}/requirements` | Active policy requirements |
+| GET | `/api/patients/{id}/evidence-candidates` | Requirement-linked source passages |
+| POST | `/api/patients/{id}/evidence-candidates/retrieve` | Re-run candidate retrieval |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
 
-## Milestone 1.5 UI
+## Milestone 2
 
 Open http://localhost:3000 for the clinician workspace:
 
 - Document library + PDF upload
 - Side-by-side PDF preview and extracted page text
-- Placeholder panels for observations, requirements, and evidence packet
+- Requirement-driven retrieval with exact page-level quotations
+- Persistent evidence candidates linked to the fictional active policy
+- Requirement-specific extraction of only needed dates, doses, and values
+- Clear separation between unverified candidates and accepted evidence
+- Placeholder panels for verified requirements and evidence packet
+
+Unburden does not construct a general-purpose medical history. Milestone 2 candidates
+only mean that a passage may be relevant to a requirement; Milestone 3 determines
+whether it actually satisfies that requirement.
 
 Default patient id: `patient-raymond-yao`
 
@@ -107,4 +117,4 @@ pytest
 
 - Sample insurance policy criteria are **fictional** and for demo only.
 - No real patient data.
-- If no LLM key is configured, later milestones fall back to deterministic fixture observations so the evidence engine stays testable.
+- Lexical retrieval is sufficient for the small demo corpus; semantic retrieval can be added if evaluation shows recall gaps.

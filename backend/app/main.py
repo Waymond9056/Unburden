@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.demo import router as demo_router
 from app.api.patients import router as patients_router
+from app.api.policies import router as policies_router
 from app.core.config import get_settings
 from app.core.database import SessionLocal, init_db
 from app.models.schemas import HealthResponse
@@ -27,9 +28,14 @@ async def lifespan(_: FastAPI):
         ensure_seed_patient(db)
         # Auto-seed synthetic docs on first launch if the library is empty.
         from app.models.db import Document
+        from app.services.evidence_retrieval import backfill_missing_candidates
 
         if db.query(Document).count() == 0:
             seed_database(db, regenerate_pdfs=True)
+        else:
+            # Upgrade Milestone 1 databases in place. Existing candidates and
+            # future verification decisions are left untouched.
+            backfill_missing_candidates(db)
     finally:
         db.close()
 
@@ -48,6 +54,7 @@ app.add_middleware(
 
 app.include_router(patients_router, prefix=settings.api_prefix)
 app.include_router(demo_router, prefix=settings.api_prefix)
+app.include_router(policies_router, prefix=settings.api_prefix)
 
 
 @app.get("/health", response_model=HealthResponse)
