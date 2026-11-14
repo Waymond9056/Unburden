@@ -3,14 +3,26 @@
   "checkpoint_id": "01M7DTQPV47JW2S76SNKNH3ZHC",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 11,
   "files_touched": [
+    "backend/app/main.py",
+    "backend/app/policies/fictional_severe_asthma_pa.json",
+    "backend/app/services/packet_export.py",
+    "backend/app/services/seed.py",
     "data/seed/duplicate_consult_summary.pdf",
     "data/seed/exacerbation_er_note.pdf",
     "data/seed/lab_eosinophils.pdf",
     "data/seed/medication_history.pdf",
     "data/seed/misleading_allergy_note.pdf",
-    "data/seed/pulmonary_consult_note.pdf"
+    "data/seed/pulmonary_consult_note.pdf",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/DocumentLibrary.tsx",
+    "frontend/src/components/DocumentViewer.tsx",
+    "frontend/src/components/EvidencePacketPanel.tsx",
+    "frontend/src/components/PatientUploadView.tsx",
+    "frontend/src/components/RequirementsChecklist.tsx",
+    "frontend/src/lib/constants.ts"
   ],
   "sessions": [
     {
@@ -19,22 +31,29 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 19526,
+    "input_tokens": 404913,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 64000,
-    "output_tokens": 1034,
-    "api_call_count": 1
+    "cache_read_tokens": 3417472,
+    "output_tokens": 17031,
+    "api_call_count": 11
   },
   "redaction": {
-    "replacements": 0,
+    "replacements": 2,
     "layers": {
-      "betterleaks": 0,
+      "betterleaks": 2,
       "connection_string": 0,
       "credential_key": 0,
-      "credential_value": 0,
+      "credential_value": 1,
       "credentialed_uri": 0,
       "entropy": 0,
       "key_context": 0,

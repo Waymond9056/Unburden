@@ -1,0 +1,37 @@
+hide the requirement evidence sectino for now. i dont think its needed
+
+---
+
+give me the option to switch between patients. just add another patient named john doe, give them just like 0 documents by default so nothing's satisfied. make sure raymond yao and john does data doesn't overlap obviously
+
+---
+
+remove the part that says "FICTIONAL illustrative policy for the Unburden hackathon demo only. Not the requirements of any real insurer."
+
+---
+
+remove the part in the document tab that says "PDF preview" and "Extracted text"
+
+---
+
+remove the part that says "careprovider view" and instead make the unburden workspace part" say what view we're in
+
+---
+
+remove this part "lab_eosinophils.pdf · 1 page"
+
+---
+
+does the "reevaluate button" do anything
+
+---
+
+move the  unburden title to the top, keeping its text style and just remove the part that tells me what workspace im in. move the button on the right down a block to the patient name and info section
+
+---
+
+above the paitnet name and DOB remove the wordp atient
+
+---
+
+remove the part about the PDF viewer that has the title of the pdf
