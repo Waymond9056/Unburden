@@ -1,0 +1,102 @@
+{
+  "id": "fictional-severe-asthma-policy",
+  "name": "Aether Health — Severe Asthma Prior Authorization (FICTIONAL)",
+  "disclaimer": "FICTIONAL illustrative policy for the Unburden hackathon demo only. Not the requirements of any real insurer.",
+  "logic": "AND",
+  "as_of_date": "2025-11-01",
+  "requirements": [
+    {
+      "id": "documented_severe_asthma",
+      "title": "Documented severe asthma diagnosis",
+      "description": "Records must document severe persistent asthma (or equivalent coded diagnosis).",
+      "retrieval_terms": ["severe persistent asthma", "severe asthma", "J45.50"],
+      "detail_fields": ["dates", "matched_terms"],
+      "acceptable_document_types": ["clinical_note", "hospital_note"],
+      "must_match_any": ["severe persistent asthma", "J45.50"],
+      "reject_if_quote_matches_any": [],
+      "ambiguous_if_quote_matches_any": ["possible asthma", "suspected asthma"],
+      "temporal": null,
+      "numeric": null,
+      "min_accepted_candidates": 1,
+      "suggested_document_types": ["pulmonary consult note", "problem list / diagnosis documentation"]
+    },
+    {
+      "id": "prior_controller_therapy",
+      "title": "Prior high-dose controller therapy",
+      "description": "Documentation of a high-dose ICS/LABA controller trial lasting at least 3 months.",
+      "retrieval_terms": [
+        "inhaled corticosteroid",
+        "long-acting beta agonist",
+        "fluticasone-salmeterol",
+        "controller therapy",
+        "Symbicort"
+      ],
+      "detail_fields": ["dates", "dose_mentions", "matched_terms"],
+      "acceptable_document_types": ["medication_record", "clinical_note"],
+      "must_match_any": [
+        "fluticasone-salmeterol",
+        "inhaled corticosteroid",
+        "controller therapy",
+        "Symbicort"
+      ],
+      "reject_if_quote_matches_any": ["nasal symptoms", "allergic rhinitis"],
+      "ambiguous_if_quote_matches_any": ["discussed", "considered"],
+      "temporal": {
+        "within_months": 24,
+        "date_required": true
+      },
+      "numeric": null,
+      "require_interval_days_min": 90,
+      "min_accepted_candidates": 1,
+      "suggested_document_types": ["pharmacy fill history", "medication list with dates"]
+    },
+    {
+      "id": "qualifying_eosinophil_result",
+      "title": "Qualifying eosinophil laboratory result",
+      "description": "Dated absolute eosinophil count ≥ 300 cells/µL within the prior 12 months.",
+      "retrieval_terms": ["eosinophil", "cells/µL", "cells/uL"],
+      "detail_fields": ["dates", "numeric_mentions", "matched_terms"],
+      "acceptable_document_types": ["laboratory_report"],
+      "must_match_any": ["eosinophil"],
+      "reject_if_quote_matches_any": [],
+      "ambiguous_if_quote_matches_any": [
+        "borderline elevated historically",
+        "qualitatively",
+        "without a dated quantitative"
+      ],
+      "temporal": {
+        "within_months": 12,
+        "date_required": true
+      },
+      "numeric": {
+        "min_value": 300,
+        "unit_substring": "cells"
+      },
+      "min_accepted_candidates": 1,
+      "suggested_document_types": ["CBC with differential / absolute eosinophil count report"]
+    },
+    {
+      "id": "recent_exacerbation_history",
+      "title": "Recent treated asthma exacerbation",
+      "description": "At least one asthma exacerbation treated with systemic corticosteroids or emergency care within 12 months.",
+      "retrieval_terms": [
+        "exacerbation",
+        "systemic corticosteroid",
+        "prednisone burst",
+        "emergency department"
+      ],
+      "detail_fields": ["dates", "matched_terms"],
+      "acceptable_document_types": ["hospital_note", "clinical_note", "medication_record"],
+      "must_match_any": ["exacerbation", "prednisone burst", "emergency department"],
+      "reject_if_quote_matches_any": ["no systemic corticosteroid exacerbation"],
+      "ambiguous_if_quote_matches_any": ["possible exacerbation"],
+      "temporal": {
+        "within_months": 12,
+        "date_required": true
+      },
+      "numeric": null,
+      "min_accepted_candidates": 1,
+      "suggested_document_types": ["ED visit summary", "hospital discharge note", "steroid burst prescription record"]
+    }
+  ]
+}

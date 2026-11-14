@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+  evaluatePolicy,
   getDocument,
   getPatient,
+  getPolicyEvaluation,
   listDocuments,
   listEvidenceCandidates,
   reseedDemo,
@@ -15,20 +17,24 @@ import type {
   DocumentSummary,
   EvidenceCandidate,
   Patient,
+  PolicyEvaluation,
 } from "@/lib/types";
 import { EvidenceCandidates } from "./EvidenceCandidates";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { DocumentViewer } from "./DocumentViewer";
 import { PlaceholderPanel } from "./PlaceholderPanel";
+import { RequirementsChecklist } from "./RequirementsChecklist";
 
 const DEFAULT_PATIENT_ID = "patient-raymond-yao";
 const STACKED_LAYOUT = "(max-width: 1023px)";
-type WorkspaceTab = "documents" | "evidence";
+type WorkspaceTab = "documents" | "evidence" | "requirements";
 
 export function Dashboard() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [evidenceCandidates, setEvidenceCandidates] = useState<EvidenceCandidate[]>([]);
+  const [evaluation, setEvaluation] = useState<PolicyEvaluation | null>(null);
+  const [evaluationLoading, setEvaluationLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<DocumentDetail | null>(null);
   const [failedDocId, setFailedDocId] = useState<string | null>(null);
@@ -47,14 +53,17 @@ export function Dashboard() {
     Boolean(selectedId) && !visibleDoc && failedDocId !== selectedId;
 
   async function refreshLibrary(selectId?: string | null) {
-    const [nextPatient, nextDocs, nextCandidates] = await Promise.all([
-      getPatient(DEFAULT_PATIENT_ID),
-      listDocuments(DEFAULT_PATIENT_ID),
-      listEvidenceCandidates(DEFAULT_PATIENT_ID),
-    ]);
+    const [nextPatient, nextDocs, nextCandidates, nextEvaluation] =
+      await Promise.all([
+        getPatient(DEFAULT_PATIENT_ID),
+        listDocuments(DEFAULT_PATIENT_ID),
+        listEvidenceCandidates(DEFAULT_PATIENT_ID),
+        getPolicyEvaluation(DEFAULT_PATIENT_ID),
+      ]);
     setPatient(nextPatient);
     setDocuments(nextDocs);
     setEvidenceCandidates(nextCandidates);
+    setEvaluation(nextEvaluation);
     const nextSelected =
       selectId === undefined
         ? (nextDocs[0]?.id ?? null)
@@ -145,6 +154,21 @@ export function Dashboard() {
     setFailedDocId(null);
     setSelectedId(id);
     setShowViewerOnMobile(true);
+  }
+
+  async function handleReevaluate() {
+    try {
+      setError(null);
+      setEvaluationLoading(true);
+      const nextEvaluation = await evaluatePolicy(DEFAULT_PATIENT_ID);
+      setEvaluation(nextEvaluation);
+      const nextCandidates = await listEvidenceCandidates(DEFAULT_PATIENT_ID);
+      setEvidenceCandidates(nextCandidates);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Evaluation failed");
+    } finally {
+      setEvaluationLoading(false);
+    }
   }
 
   async function handleUpload(file: File) {
@@ -264,6 +288,26 @@ export function Dashboard() {
             </span>
           )}
         </button>
+        <button
+          type="button"
+          role="tab"
+          id="requirements-tab"
+          aria-selected={activeTab === "requirements"}
+          aria-controls="requirements-panel"
+          onClick={() => setActiveTab("requirements")}
+          className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+            activeTab === "requirements"
+              ? "border-accent text-ink"
+              : "border-transparent text-muted hover:border-line hover:text-ink-soft"
+          }`}
+        >
+          Insurance requirements
+          {evaluation && (
+            <span className="ml-2 bg-mist px-2 py-0.5 text-xs text-ink-soft">
+              {evaluation.overall_status.replaceAll("_", " ")}
+            </span>
+          )}
+        </button>
       </div>
 
       {bootLoading ? (
@@ -310,23 +354,16 @@ export function Dashboard() {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === "evidence" ? (
         <div
           role="tabpanel"
           id="evidence-panel"
           aria-labelledby="evidence-tab"
         >
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <EvidenceCandidates
-                candidates={evidenceCandidates}
-                onOpenSource={handleOpenEvidenceSource}
-              />
-            </div>
-            <PlaceholderPanel
-              title="Insurance requirements"
-              milestone="Milestone 3"
-              description="Supported / not established / needs review statuses will populate this checklist."
+          <div className="grid gap-10">
+            <EvidenceCandidates
+              candidates={evidenceCandidates}
+              onOpenSource={handleOpenEvidenceSource}
             />
             <PlaceholderPanel
               title="Evidence packet"
@@ -334,6 +371,21 @@ export function Dashboard() {
               description="Optimized document selection and missing-evidence guidance will show here."
             />
           </div>
+        </div>
+      ) : (
+        <div
+          role="tabpanel"
+          id="requirements-panel"
+          aria-labelledby="requirements-tab"
+        >
+          <RequirementsChecklist
+            evaluation={evaluation}
+            loading={evaluationLoading}
+            onOpenCandidate={(documentId) =>
+              handleOpenEvidenceSource(documentId)
+            }
+            onReevaluate={() => void handleReevaluate()}
+          />
         </div>
       )}
     </div>

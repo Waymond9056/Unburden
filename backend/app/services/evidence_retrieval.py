@@ -80,11 +80,17 @@ def retrieve_page_candidates(
         return []
 
     index, start, end, terms = max(matches, key=lambda item: len(item[3]))
-    current = passages[index][2]
-    if not DATE_PATTERN.search(current) and index > 0:
-        previous_start, _, previous = passages[index - 1]
-        if DATE_PATTERN.search(previous):
+    # Walk backward a few sentences so nearby dates stay attached to the citation.
+    cursor = index
+    while cursor > 0 and not DATE_PATTERN.search(page.text[start:end]):
+        previous_start, _, previous = passages[cursor - 1]
+        if DATE_PATTERN.search(previous) or cursor == index:
             start = previous_start
+            cursor -= 1
+            if DATE_PATTERN.search(page.text[start:end]):
+                break
+            continue
+        break
     passage = page.text[start:end]
     score = min(1.0, 0.35 + (0.2 * len(terms)))
     return [

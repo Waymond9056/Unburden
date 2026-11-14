@@ -57,6 +57,46 @@ class EvidenceCandidateOut(BaseModel):
     source_document_type: Optional[str] = None
 
 
+class PolicyOut(BaseModel):
+    id: str
+    name: str
+    disclaimer: str
+    logic: str
+    as_of_date: date
+    requirements: list[PolicyRequirementOut]
+
+
+class CandidateVerdictOut(BaseModel):
+    candidate_id: str
+    status: str
+    reasons: list[str] = Field(default_factory=list)
+
+
+class RequirementEvaluationOut(BaseModel):
+    requirement_id: str
+    title: str
+    status: str
+    explanation: str
+    suggested_document_types: list[str] = Field(default_factory=list)
+    accepted_candidate_ids: list[str] = Field(default_factory=list)
+    review_candidate_ids: list[str] = Field(default_factory=list)
+    rejected_candidate_ids: list[str] = Field(default_factory=list)
+    supporting_candidates: list[EvidenceCandidateOut] = Field(default_factory=list)
+    review_candidates: list[EvidenceCandidateOut] = Field(default_factory=list)
+
+
+class PolicyEvaluationOut(BaseModel):
+    patient_id: str
+    policy_id: str
+    policy_name: str
+    disclaimer: str
+    as_of_date: date
+    logic: str
+    overall_status: str
+    requirements: list[RequirementEvaluationOut]
+    candidate_verdicts: list[CandidateVerdictOut] = Field(default_factory=list)
+
+
 class HealthResponse(BaseModel):
     status: str
     app: str

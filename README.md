@@ -74,26 +74,28 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | GET | `/api/patients/{id}/documents` | List documents |
 | GET | `/api/patients/{id}/documents/{doc_id}` | Document + page text |
 | GET | `/api/patients/{id}/documents/{doc_id}/file` | Original PDF (inline preview) |
+| GET | `/api/policies` | List fictional example policies |
+| GET | `/api/policies/{id}` | Policy detail + requirements |
 | GET | `/api/policies/{id}/requirements` | Active policy requirements |
 | GET | `/api/patients/{id}/evidence-candidates` | Requirement-linked source passages |
 | POST | `/api/patients/{id}/evidence-candidates/retrieve` | Re-run candidate retrieval |
+| POST | `/api/patients/{id}/evaluate` | Run structured policy verification |
+| GET | `/api/patients/{id}/policy-evaluation` | Requirements checklist statuses |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
 
-## Milestone 2
+## Milestone 2–3 workspace
 
-Open http://localhost:3000 for the clinician workspace:
+Open http://localhost:3000:
 
-- Document library + PDF upload
-- Side-by-side PDF preview and extracted page text
-- Requirement-driven retrieval with exact page-level quotations
-- Persistent evidence candidates linked to the fictional active policy
-- Requirement-specific extraction of only needed dates, doses, and values
-- Clear separation between unverified candidates and accepted evidence
-- Placeholder panels for verified requirements and evidence packet
+- Document library + PDF upload + page text / PDF preview
+- Requirement-linked retrieval with exact citations (M2)
+- Structured verification checklist: SUPPORTED / NOT_ESTABLISHED / NEEDS_REVIEW (M3)
+- Click citations to open the source document
+- Evidence packet panel still placeholder (M4)
 
-Unburden does not construct a general-purpose medical history. Milestone 2 candidates
-only mean that a passage may be relevant to a requirement; Milestone 3 determines
-whether it actually satisfies that requirement.
+The sample policy is **fictional** and labeled as such. Candidates from M2 are not
+automatically accepted; M3 applies temporal, numeric, document-type, and quote-in-source
+constraints before marking a requirement supported.
 
 Default patient id: `patient-raymond-yao`
 

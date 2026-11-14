@@ -3,6 +3,7 @@ import type {
   DocumentSummary,
   EvidenceCandidate,
   Patient,
+  PolicyEvaluation,
 } from "./types";
 
 const API_BASE =
@@ -44,6 +45,18 @@ export function listEvidenceCandidates(patientId: string) {
   return request<EvidenceCandidate[]>(
     `/api/patients/${patientId}/evidence-candidates`,
   );
+}
+
+export function getPolicyEvaluation(patientId: string) {
+  return request<PolicyEvaluation>(
+    `/api/patients/${patientId}/policy-evaluation`,
+  );
+}
+
+export function evaluatePolicy(patientId: string) {
+  return request<PolicyEvaluation>(`/api/patients/${patientId}/evaluate`, {
+    method: "POST",
+  });
 }
 
 export function documentFileUrl(patientId: string, documentId: string) {

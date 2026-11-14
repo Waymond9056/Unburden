@@ -10,14 +10,18 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.db import EvidenceCandidate, Patient
 from app.models.schemas import (
+    CandidateVerdictOut,
     DocumentDetail,
     DocumentSummary,
     EvidenceCandidateOut,
     PageText,
     PatientOut,
+    PolicyEvaluationOut,
+    RequirementEvaluationOut,
 )
 from app.services import documents as document_service
 from app.services.evidence_retrieval import retrieve_for_patient
+from app.services.evidence_verification import evaluate_patient_policy
 from app.services.policy import FICTIONAL_POLICY_ID, REQUIREMENTS_BY_ID
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -154,5 +158,84 @@ def retrieve_evidence_candidates(
         _candidate_out(candidate)
         for candidate in retrieve_for_patient(db, patient_id)
     ]
+
+
+def _policy_evaluation_out(patient_id: str, evaluation, db: Session) -> PolicyEvaluationOut:
+    candidates = (
+        db.query(EvidenceCandidate)
+        .filter(
+            EvidenceCandidate.patient_id == patient_id,
+            EvidenceCandidate.policy_id == evaluation.policy_id,
+        )
+        .all()
+    )
+    by_id = {candidate.id: _candidate_out(candidate) for candidate in candidates}
+    return PolicyEvaluationOut(
+        patient_id=patient_id,
+        policy_id=evaluation.policy_id,
+        policy_name=evaluation.policy_name,
+        disclaimer=evaluation.disclaimer,
+        as_of_date=evaluation.as_of_date,
+        logic=evaluation.logic,
+        overall_status=evaluation.overall_status,
+        requirements=[
+            RequirementEvaluationOut(
+                requirement_id=item.requirement_id,
+                title=item.title,
+                status=item.status,
+                explanation=item.explanation,
+                suggested_document_types=item.suggested_document_types,
+                accepted_candidate_ids=item.accepted_candidate_ids,
+                review_candidate_ids=item.review_candidate_ids,
+                rejected_candidate_ids=item.rejected_candidate_ids,
+                supporting_candidates=[
+                    by_id[candidate_id]
+                    for candidate_id in item.accepted_candidate_ids
+                    if candidate_id in by_id
+                ],
+                review_candidates=[
+                    by_id[candidate_id]
+                    for candidate_id in item.review_candidate_ids
+                    if candidate_id in by_id
+                ],
+            )
+            for item in evaluation.requirements
+        ],
+        candidate_verdicts=[
+            CandidateVerdictOut(
+                candidate_id=verdict.candidate_id,
+                status=verdict.status,
+                reasons=verdict.reasons,
+            )
+            for verdict in evaluation.candidate_verdicts
+        ],
+    )
+
+
+@router.post("/{patient_id}/evaluate", response_model=PolicyEvaluationOut)
+def evaluate_policy(
+    patient_id: str,
+    policy_id: str = FICTIONAL_POLICY_ID,
+    db: Session = Depends(get_db),
+) -> PolicyEvaluationOut:
+    document_service.ensure_patient(db, patient_id)
+    if policy_id != FICTIONAL_POLICY_ID:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    evaluation = evaluate_patient_policy(db, patient_id, policy_id=policy_id, persist=True)
+    return _policy_evaluation_out(patient_id, evaluation, db)
+
+
+@router.get("/{patient_id}/policy-evaluation", response_model=PolicyEvaluationOut)
+def get_policy_evaluation(
+    patient_id: str,
+    policy_id: str = FICTIONAL_POLICY_ID,
+    db: Session = Depends(get_db),
+) -> PolicyEvaluationOut:
+    """Re-run structured verification (deterministic) and return the checklist."""
+    document_service.ensure_patient(db, patient_id)
+    if policy_id != FICTIONAL_POLICY_ID:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    evaluation = evaluate_patient_policy(db, patient_id, policy_id=policy_id, persist=True)
+    return _policy_evaluation_out(patient_id, evaluation, db)
 
 

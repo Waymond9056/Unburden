@@ -43,3 +43,27 @@ export type EvidenceCandidate = {
   source_document_name: string | null;
   source_document_type: string | null;
 };
+
+export type RequirementEvaluation = {
+  requirement_id: string;
+  title: string;
+  status: string;
+  explanation: string;
+  suggested_document_types: string[];
+  accepted_candidate_ids: string[];
+  review_candidate_ids: string[];
+  rejected_candidate_ids: string[];
+  supporting_candidates: EvidenceCandidate[];
+  review_candidates: EvidenceCandidate[];
+};
+
+export type PolicyEvaluation = {
+  patient_id: string;
+  policy_id: string;
+  policy_name: string;
+  disclaimer: string;
+  as_of_date: string;
+  logic: string;
+  overall_status: string;
+  requirements: RequirementEvaluation[];
+};
