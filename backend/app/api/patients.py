@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -50,8 +53,6 @@ async def upload_document(
     db: Session = Depends(get_db),
 ) -> DocumentSummary:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="Only PDF uploads are supported")
 
     document = document_service.store_and_index_pdf(
@@ -76,6 +77,22 @@ def get_document(patient_id: str, document_id: str, db: Session = Depends(get_db
     return DocumentDetail(
         **_document_summary(doc).model_dump(),
         pages=[PageText(page_number=p.page_number, text=p.text) for p in doc.pages],
+    )
+
+
+@router.get("/{patient_id}/documents/{document_id}/file")
+def download_document_file(
+    patient_id: str, document_id: str, db: Session = Depends(get_db)
+) -> FileResponse:
+    doc = document_service.get_document(db, patient_id, document_id)
+    path = Path(doc.storage_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Stored PDF file is missing")
+    return FileResponse(
+        path=path,
+        media_type="application/pdf",
+        filename=doc.original_filename,
+        content_disposition_type="inline",
     )
 
 

@@ -73,8 +73,17 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | POST | `/api/patients/{id}/documents` | Upload PDF |
 | GET | `/api/patients/{id}/documents` | List documents |
 | GET | `/api/patients/{id}/documents/{doc_id}` | Document + page text |
+| GET | `/api/patients/{id}/documents/{doc_id}/file` | Original PDF (inline preview) |
 | GET | `/api/patients/{id}/observations` | Observations (empty until M2) |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
+
+## Milestone 1.5 UI
+
+Open http://localhost:3000 for the clinician workspace:
+
+- Document library + PDF upload
+- Side-by-side PDF preview and extracted page text
+- Placeholder panels for observations, requirements, and evidence packet
 
 Default patient id: `patient-raymond-yao`
 

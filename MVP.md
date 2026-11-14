@@ -305,13 +305,15 @@ Implement in this order:
 
 **Milestone 1:** Project scaffolding, database schema, PDF upload, text extraction, and synthetic seed documents.
 
-**Milestone 2:** Structured clinical observation extraction with persistent source citations.
+**Milestone 1.5:** Working clinician frontend against current APIs so features can be tested as they land. Includes document library, PDF upload, extracted-text + PDF preview, and placeholder panels for observations, policy checklist, and evidence packet (filled in by later milestones).
 
-**Milestone 3:** Structured insurance policy representation and evidence retrieval/verification engine.
+**Milestone 2:** Structured clinical observation extraction with persistent source citations (wire into the observations panel).
 
-**Milestone 4:** Document selection optimization and missing-evidence checklist.
+**Milestone 3:** Structured insurance policy representation and evidence retrieval/verification engine (wire into the requirements checklist).
 
-**Milestone 5:** Functional clinician dashboard and PDF previews.
+**Milestone 4:** Document selection optimization and missing-evidence checklist (wire into the evidence packet / missing-info panels).
+
+**Milestone 5:** Complete remaining dashboard interactions (citation deep-links, status-change highlights) and tighten the clinician workflow.
 
 **Milestone 6:** Automated evaluation, end-to-end demo testing, and UI polish.
 

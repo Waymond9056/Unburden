@@ -60,3 +60,10 @@ def test_upload_and_list_documents(tmp_path: Path) -> None:
     pages = detail.json()["pages"]
     assert pages[0]["page_number"] == 1
     assert "eosinophil" in pages[0]["text"].lower()
+
+    file_response = client.get(
+        f"/api/patients/{PATIENT_ID}/documents/{body['id']}/file"
+    )
+    assert file_response.status_code == 200
+    assert file_response.headers["content-type"].startswith("application/pdf")
+    assert file_response.content[:4] == b"%PDF"
