@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.chert import router as chert_router
 from app.api.demo import router as demo_router
 from app.api.patients import router as patients_router
 from app.api.policies import router as policies_router
@@ -56,6 +57,7 @@ app.add_middleware(
 )
 
 app.include_router(patients_router, prefix=settings.api_prefix)
+app.include_router(chert_router, prefix=settings.api_prefix)
 app.include_router(demo_router, prefix=settings.api_prefix)
 app.include_router(policies_router, prefix=settings.api_prefix)
 

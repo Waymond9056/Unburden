@@ -5,6 +5,18 @@ export type Patient = {
   created_at: string;
 };
 
+export type ChertSession = {
+  session_id: string;
+  patient_id: string;
+  call_id: string | null;
+  room_name: string;
+  status: string;
+  created_at: string;
+  error: string | null;
+  document_id: string | null;
+  source_label: string | null;
+};
+
 export type DocumentSummary = {
   id: string;
   patient_id: string;

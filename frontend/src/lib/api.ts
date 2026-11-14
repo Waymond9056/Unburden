@@ -1,5 +1,6 @@
 import type {
   CandidateStatus,
+  ChertSession,
   DocumentDetail,
   DocumentSummary,
   EvidenceCandidate,
@@ -172,4 +173,16 @@ export async function reseedDemo() {
     documents_created: number;
     document_ids: string[];
   }>("/api/demo/seed", { method: "POST" });
+}
+
+export function ringDocumentAssistant(patientId: string) {
+  return request<ChertSession>(`/api/patients/${patientId}/chert/ring`, {
+    method: "POST",
+  });
+}
+
+export function getChertSession(patientId: string, sessionId: string) {
+  return request<ChertSession>(
+    `/api/patients/${patientId}/chert/sessions/${sessionId}`,
+  );
 }

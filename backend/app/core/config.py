@@ -41,6 +41,18 @@ class Settings(BaseSettings):
 
     default_patient_id: str = "patient-raymond-yao"
 
+    # Chert FaceTime document intake (outbound video → frame capture → PDF upload)
+    chert_api_key: str = ""
+    chert_project_id: str = ""
+    chert_line_id: str = ""
+    chert_destination_phone: str = ""
+    chert_agent_name: str = "document-intake"
+
+    # LiveKit project used for BYOR outbound rooms (required to ring)
+    livekit_url: str = ""
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
