@@ -1,0 +1,57 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7DPAXA0BSWWSFEKVNAA4EHJ",
+  "session_id": "3aa252d1-aaff-4b86-8153-5b6320c8dcd8",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T18:50:22.413424Z",
+  "branch": "deberta",
+  "checkpoints_count": 5,
+  "save_step_count": 4,
+  "files_touched": [
+    "backend/app/api/patients.py",
+    "backend/app/services/documents.py",
+    "data/seed/duplicate_consult_summary.pdf",
+    "data/seed/exacerbation_er_note.pdf",
+    "data/seed/lab_eosinophils.pdf",
+    "data/seed/medication_history.pdf",
+    "data/seed/misleading_allergy_note.pdf",
+    "data/seed/pulmonary_consult_note.pdf",
+    "frontend/src/app/page.tsx",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/DocumentLibrary.tsx",
+    "frontend/src/components/PatientUploadView.tsx",
+    "frontend/src/lib/api.ts",
+    "frontend/src/lib/constants.ts"
+  ],
+  "agent": "Cursor",
+  "model": "default",
+  "turn_id": "5da8fe0f8c1a",
+  "checkpoint_transcript_start": 172,
+  "transcript_lines_at_start": 172,
+  "compact_transcript_start": 42,
+  "token_usage": {
+    "input_tokens": 221418,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3004544,
+    "output_tokens": 7698,
+    "api_call_count": 4
+  },
+  "redaction": {
+    "replacements": 2,
+    "layers": {
+      "betterleaks": 2,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 1,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 15
+  }
+}

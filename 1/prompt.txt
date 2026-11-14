@@ -1,0 +1,30 @@
+**Milestone 6:** Automated evaluation, end-to-end demo testing, and UI polish.
+
+is there anything needed to be done in this phase? liekly not right
+
+---
+
+i want another like entire section to this website
+
+like essentially 2 separate views of the website that you can switch between
+
+patient view
+careprovider view
+
+and the patient view literally only has "document upload" option
+
+and the careprovider view has everything that we have currently built out
+
+and obviously uploading a document shows up in the careprovider view
+
+---
+
+what's the database for documents?
+
+---
+
+okay give the option to delete docuemnts too for the careprovider side
+
+---
+
+is code here
