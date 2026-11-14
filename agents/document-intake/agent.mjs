@@ -142,9 +142,10 @@ const agent = defineAgent({
         };
       }
       console.log('[document-intake] capturing frames…');
+      // One sharp page beats two FaceTime-chrome duplicates for OCR.
       const frames = await collectBestFrames(() => videoFollow.getLatest(), {
-        durationMs: 8_000,
-        count: 2,
+        durationMs: 10_000,
+        count: 1,
         minScore: 40,
       });
       if (!frames.length) {
@@ -181,7 +182,7 @@ const agent = defineAgent({
         console.log('[document-intake] FaceTime ready');
         void (async () => {
           await say(
-            'Hi, this is Unburden’s document assistant. Please hold your document up to the camera so it fills the frame.',
+            'Hi, this is Unburden’s document assistant. Hold the document close so the text is large and fills most of the camera. Avoid screen glare if you can.',
           );
           const hasVideo = await waitForCallerVideo(45_000);
           if (!hasVideo) {
