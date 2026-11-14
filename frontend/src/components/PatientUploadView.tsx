@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import { uploadDocument } from "@/lib/api";
-import { DEFAULT_PATIENT_ID } from "@/lib/constants";
 
-export function PatientUploadView() {
+export function PatientUploadView({
+  patientId,
+  patientName,
+}: {
+  patientId: string;
+  patientName: string;
+}) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUploaded, setLastUploaded] = useState<string | null>(null);
@@ -13,7 +18,7 @@ export function PatientUploadView() {
     try {
       setUploading(true);
       setError(null);
-      const created = await uploadDocument(DEFAULT_PATIENT_ID, file);
+      const created = await uploadDocument(patientId, file);
       setLastUploaded(created.source_label || created.original_filename);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -24,13 +29,7 @@ export function PatientUploadView() {
 
   return (
     <div className="relative z-10 mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col justify-center px-5 py-16 sm:px-8">
-      <p className="text-xs uppercase tracking-[0.22em] text-muted">
-        Patient view
-      </p>
-      <h1 className="mt-3 font-display text-5xl tracking-tight text-ink sm:text-6xl">
-        Unburden
-      </h1>
-      <p className="mt-4 max-w-xl text-lg leading-7 text-ink-soft">
+      <p className="max-w-xl text-lg leading-7 text-ink-soft">
         Upload medical PDFs for your care team. Your clinician reviews them in
         the care provider workspace.
       </p>
@@ -38,7 +37,7 @@ export function PatientUploadView() {
       <div className="mt-10 border-y border-line/80 py-8">
         <h2 className="font-display text-2xl text-ink">Document upload</h2>
         <p className="mt-2 text-sm text-muted">
-          PDF only. Files are stored for Raymond Yao’s demo chart and appear
+          PDF only. Files are stored for {patientName}’s chart and appear
           immediately in the care provider view.
         </p>
 

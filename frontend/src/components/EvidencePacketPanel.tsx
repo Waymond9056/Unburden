@@ -65,14 +65,6 @@ export function EvidencePacketPanel({
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-2xl text-ink">Evidence packet</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-              Submission-ready packet: cover sheet plus the selected supporting
-              PDFs. Download attaches those documents for insurer review packing.
-              Unburden does not transmit or approve coverage.
-            </p>
-            <p className="mt-2 max-w-3xl text-xs leading-5 text-muted">
-              {packet.disclaimer}
-            </p>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:items-end">
             <button
@@ -130,10 +122,7 @@ export function EvidencePacketPanel({
 
       <div>
         <h2 className="font-display text-2xl text-ink">Still needed</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-          Requirements not yet established for the packet. Suggestions name
-          document kinds only — Unburden does not fetch external records.
-        </p>
+        
 
         {packet.missing_evidence.length === 0 ? (
           <p className="mt-4 text-sm text-muted">

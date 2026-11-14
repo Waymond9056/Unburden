@@ -10,7 +10,7 @@ from app.api.policies import router as policies_router
 from app.core.config import get_settings
 from app.core.database import SessionLocal, init_db
 from app.models.schemas import HealthResponse
-from app.services.seed import ensure_seed_patient, seed_database
+from app.services.seed import PATIENT_ID, ensure_demo_patients, seed_database
 
 settings = get_settings()
 
@@ -25,12 +25,15 @@ async def lifespan(_: FastAPI):
 
     db = SessionLocal()
     try:
-        ensure_seed_patient(db)
-        # Auto-seed synthetic docs on first launch if the library is empty.
+        ensure_demo_patients(db)
+        # Auto-seed Raymond's synthetic docs only when his chart is empty.
         from app.models.db import Document
         from app.services.evidence_retrieval import backfill_missing_candidates
 
-        if db.query(Document).count() == 0:
+        raymond_doc_count = (
+            db.query(Document).filter(Document.patient_id == PATIENT_ID).count()
+        )
+        if raymond_doc_count == 0:
             seed_database(db, regenerate_pdfs=True)
         else:
             # Upgrade Milestone 1 databases in place. Existing candidates and

@@ -18,6 +18,10 @@ PATIENT_ID = settings.default_patient_id
 PATIENT_NAME = "Raymond Yao"
 PATIENT_DOB = date(1985, 3, 12)
 
+JOHN_DOE_ID = "patient-john-doe"
+JOHN_DOE_NAME = "John Doe"
+JOHN_DOE_DOB = date(1978, 7, 4)
+
 # Fictional disclaimer used on every generated page
 DISCLAIMER = (
     "FICTIONAL SYNTHETIC RECORD — For Unburden hackathon demonstration only. "
@@ -183,13 +187,19 @@ def reset_patient_data(db: Session, patient_id: str = PATIENT_ID) -> None:
     db.commit()
 
 
-def ensure_seed_patient(db: Session) -> Patient:
-    patient = db.get(Patient, PATIENT_ID)
+def ensure_patient_record(
+    db: Session,
+    *,
+    patient_id: str,
+    display_name: str,
+    date_of_birth: date,
+) -> Patient:
+    patient = db.get(Patient, patient_id)
     if patient is None:
         patient = Patient(
-            id=PATIENT_ID,
-            display_name=PATIENT_NAME,
-            date_of_birth=PATIENT_DOB,
+            id=patient_id,
+            display_name=display_name,
+            date_of_birth=date_of_birth,
         )
         db.add(patient)
         db.commit()
@@ -197,8 +207,30 @@ def ensure_seed_patient(db: Session) -> Patient:
     return patient
 
 
+def ensure_seed_patient(db: Session) -> Patient:
+    return ensure_patient_record(
+        db,
+        patient_id=PATIENT_ID,
+        display_name=PATIENT_NAME,
+        date_of_birth=PATIENT_DOB,
+    )
+
+
+def ensure_demo_patients(db: Session) -> list[Patient]:
+    """Ensure isolated demo charts exist (Raymond with seed docs; John empty)."""
+    raymond = ensure_seed_patient(db)
+    john = ensure_patient_record(
+        db,
+        patient_id=JOHN_DOE_ID,
+        display_name=JOHN_DOE_NAME,
+        date_of_birth=JOHN_DOE_DOB,
+    )
+    return [raymond, john]
+
+
 def seed_database(db: Session, *, regenerate_pdfs: bool = True) -> list[str]:
-    ensure_seed_patient(db)
+    ensure_demo_patients(db)
+    # Only resets Raymond Yao — John Doe's chart stays untouched.
     reset_patient_data(db, PATIENT_ID)
 
     specs = generate_seed_pdfs() if regenerate_pdfs else [

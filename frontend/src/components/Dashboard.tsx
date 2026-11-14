@@ -11,7 +11,6 @@ import {
   getPatient,
   getPolicyEvaluation,
   listDocuments,
-  listEvidenceCandidates,
   reseedDemo,
   uploadDocument,
 } from "@/lib/api";
@@ -19,12 +18,10 @@ import { DEFAULT_PATIENT_ID } from "@/lib/constants";
 import type {
   DocumentDetail,
   DocumentSummary,
-  EvidenceCandidate,
   EvidencePacket,
   Patient,
   PolicyEvaluation,
 } from "@/lib/types";
-import { EvidenceCandidates } from "./EvidenceCandidates";
 import { EvidencePacketPanel } from "./EvidencePacketPanel";
 import { DocumentLibrary } from "./DocumentLibrary";
 import { DocumentViewer } from "./DocumentViewer";
@@ -34,7 +31,7 @@ import {
 } from "./RequirementsChecklist";
 
 const STACKED_LAYOUT = "(max-width: 1023px)";
-type WorkspaceTab = "documents" | "evidence" | "requirements" | "packet";
+type WorkspaceTab = "documents" | "requirements" | "packet";
 
 function diffRequirementStatuses(
   previous: PolicyEvaluation | null,
@@ -58,12 +55,9 @@ function diffRequirementStatuses(
   return changes;
 }
 
-export function Dashboard() {
+export function Dashboard({ patientId }: { patientId: string }) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
-  const [evidenceCandidates, setEvidenceCandidates] = useState<
-    EvidenceCandidate[]
-  >([]);
   const [evaluation, setEvaluation] = useState<PolicyEvaluation | null>(null);
   const [packet, setPacket] = useState<EvidencePacket | null>(null);
   const [statusChanges, setStatusChanges] = useState<RequirementStatusChange[]>(
@@ -107,17 +101,15 @@ export function Dashboard() {
   }
 
   async function refreshLibrary(selectId?: string | null) {
-    const [nextPatient, nextDocs, nextCandidates, nextEvaluation, nextPacket] =
+    const [nextPatient, nextDocs, nextEvaluation, nextPacket] =
       await Promise.all([
-        getPatient(DEFAULT_PATIENT_ID),
-        listDocuments(DEFAULT_PATIENT_ID),
-        listEvidenceCandidates(DEFAULT_PATIENT_ID),
-        getPolicyEvaluation(DEFAULT_PATIENT_ID),
-        getEvidencePacket(DEFAULT_PATIENT_ID),
+        getPatient(patientId),
+        listDocuments(patientId),
+        getPolicyEvaluation(patientId),
+        getEvidencePacket(patientId),
       ]);
     setPatient(nextPatient);
     setDocuments(nextDocs);
-    setEvidenceCandidates(nextCandidates);
     applyEvaluation(nextEvaluation);
     setPacket(nextPacket);
     const nextSelected =
@@ -160,7 +152,7 @@ export function Dashboard() {
     const id = selectedId;
     (async () => {
       try {
-        const detail = await getDocument(DEFAULT_PATIENT_ID, id);
+        const detail = await getDocument(patientId, id);
         if (!cancelled) setSelectedDoc(detail);
       } catch (err) {
         if (!cancelled) {
@@ -174,7 +166,7 @@ export function Dashboard() {
     return () => {
       cancelled = true;
     };
-  }, [selectedId]);
+  }, [selectedId, patientId]);
 
   useEffect(() => {
     const intent = scrollIntent.current;
@@ -225,17 +217,13 @@ export function Dashboard() {
       setError(null);
       setEvaluationLoading(true);
       setPacketLoading(true);
-      const nextEvaluation = await evaluatePolicy(DEFAULT_PATIENT_ID);
+      const nextEvaluation = await evaluatePolicy(patientId);
       const changes = diffRequirementStatuses(
         previousEvaluationRef.current,
         nextEvaluation,
       );
       applyEvaluation(nextEvaluation);
-      const [nextCandidates, nextPacket] = await Promise.all([
-        listEvidenceCandidates(DEFAULT_PATIENT_ID),
-        getEvidencePacket(DEFAULT_PATIENT_ID),
-      ]);
-      setEvidenceCandidates(nextCandidates);
+      const nextPacket = await getEvidencePacket(patientId);
       setPacket(nextPacket);
       if (changes.length > 0) setActiveTab("requirements");
     } catch (err) {
@@ -250,7 +238,7 @@ export function Dashboard() {
     try {
       setError(null);
       setPacketLoading(true);
-      const nextPacket = await getEvidencePacket(DEFAULT_PATIENT_ID);
+      const nextPacket = await getEvidencePacket(patientId);
       setPacket(nextPacket);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Packet build failed");
@@ -262,7 +250,7 @@ export function Dashboard() {
   async function handleExportPacket() {
     try {
       setError(null);
-      await downloadEvidencePacketPdf(DEFAULT_PATIENT_ID);
+      await downloadEvidencePacketPdf(patientId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Packet export failed");
     }
@@ -272,7 +260,7 @@ export function Dashboard() {
     try {
       setUploading(true);
       setError(null);
-      const created = await uploadDocument(DEFAULT_PATIENT_ID, file);
+      const created = await uploadDocument(patientId, file);
       await refreshLibrary(created.id);
       setActiveTab("requirements");
     } catch (err) {
@@ -297,7 +285,7 @@ export function Dashboard() {
         setFocusPage(null);
         setHighlightQuote(null);
       }
-      await deleteDocument(DEFAULT_PATIENT_ID, documentId);
+      await deleteDocument(patientId, documentId);
       await refreshLibrary(selectedId === documentId ? null : selectedId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
@@ -308,7 +296,7 @@ export function Dashboard() {
 
   async function handleReseed() {
     const confirmed = window.confirm(
-      "Reload demo documents? Uploaded PDFs will be removed.",
+      "Reload Raymond Yao’s demo documents? That chart’s uploaded PDFs will be removed. Other patients are left alone.",
     );
     if (!confirmed) return;
 
@@ -337,38 +325,30 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-8 sm:px-8">
-      <header className="mb-8">
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">
-              Care provider view
-            </p>
-            <h1 className="mt-1 font-display text-3xl text-ink">Unburden</h1>
-          </div>
-          <div className="flex flex-col items-start gap-1 sm:items-end">
-            <button
-              type="button"
-              onClick={() => void handleReseed()}
-              className="border border-line bg-white/50 px-4 py-2 text-sm text-ink-soft hover:border-ink/30 hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-            >
-              Reload demo documents
-            </button>
-            <p className="text-xs text-muted">Uploaded PDFs will be removed.</p>
-          </div>
-        </div>
-      </header>
-
       {patient && (
-        <div className="mb-6 border-y border-line/80 py-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted">
-            Patient
-          </p>
-          <p className="mt-1 font-display text-2xl text-ink">
-            {patient.display_name}
-          </p>
-          <p className="text-sm text-muted">
-            DOB {patient.date_of_birth ?? "—"}
-          </p>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-y border-line/80 py-4">
+          <div>
+            <p className="font-display text-2xl text-ink">
+              {patient.display_name}
+            </p>
+            <p className="text-sm text-muted">
+              DOB {patient.date_of_birth ?? "—"}
+            </p>
+          </div>
+          {patientId === DEFAULT_PATIENT_ID && (
+            <div className="flex flex-col items-start gap-1 sm:items-end">
+              <button
+                type="button"
+                onClick={() => void handleReseed()}
+                className="border border-line bg-white/50 px-4 py-2 text-sm text-ink-soft hover:border-ink/30 hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+              >
+                Reload demo documents
+              </button>
+              <p className="text-xs text-muted">
+                Only Raymond Yao’s demo chart is reset.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -408,26 +388,6 @@ export function Dashboard() {
           }`}
         >
           Documents
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="evidence-tab"
-          aria-selected={activeTab === "evidence"}
-          aria-controls="evidence-panel"
-          onClick={() => setActiveTab("evidence")}
-          className={`border-b-2 px-4 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
-            activeTab === "evidence"
-              ? "border-accent text-ink"
-              : "border-transparent text-muted hover:border-line hover:text-ink-soft"
-          }`}
-        >
-          Requirement evidence
-          {evidenceCandidates.length > 0 && (
-            <span className="ml-2 bg-mist px-2 py-0.5 text-xs text-ink-soft">
-              {evidenceCandidates.length}
-            </span>
-          )}
         </button>
         <button
           type="button"
@@ -509,7 +469,7 @@ export function Dashboard() {
               </button>
               <div className="min-h-0 flex-1">
                 <DocumentViewer
-                  patientId={DEFAULT_PATIENT_ID}
+                  patientId={patientId}
                   document={visibleDoc}
                   loading={docLoading}
                   focusPage={focusPage}
@@ -518,17 +478,6 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      ) : activeTab === "evidence" ? (
-        <div
-          role="tabpanel"
-          id="evidence-panel"
-          aria-labelledby="evidence-tab"
-        >
-          <EvidenceCandidates
-            candidates={evidenceCandidates}
-            onOpenSource={handleOpenEvidenceSource}
-          />
         </div>
       ) : activeTab === "requirements" ? (
         <div

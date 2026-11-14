@@ -51,22 +51,8 @@ export function DocumentViewer({
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-4">
-      <header>
-        <h2 className="font-display text-2xl text-ink">
-          {document.source_label || document.original_filename}
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          {document.original_filename} · {document.page_count} page
-          {document.page_count === 1 ? "" : "s"}
-          {focusPage ? ` · focused on page ${focusPage}` : ""}
-        </p>
-      </header>
-
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
         <div className="flex min-h-[320px] flex-col border border-line bg-white/60">
-          <div className="border-b border-line px-3 py-2 text-xs uppercase tracking-[0.14em] text-muted">
-            PDF preview
-          </div>
           <iframe
             key={`${document.id}-${focusPage ?? "all"}`}
             title={`PDF preview ${document.original_filename}`}
@@ -76,9 +62,6 @@ export function DocumentViewer({
         </div>
 
         <div className="flex min-h-[320px] flex-col border border-line bg-white/60">
-          <div className="border-b border-line px-3 py-2 text-xs uppercase tracking-[0.14em] text-muted">
-            Extracted text
-          </div>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
             {document.pages.map((page) => {
               const focused = focusPage === page.page_number;

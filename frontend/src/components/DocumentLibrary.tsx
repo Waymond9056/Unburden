@@ -42,9 +42,7 @@ export function DocumentLibrary({
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl text-ink">Document library</h2>
-          <p className="mt-1 text-sm text-muted">
-            Upload PDFs and inspect extracted page text.
-          </p>
+         
         </div>
         <label
           className={`relative cursor-pointer border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 focus-within:ring-offset-paper ${

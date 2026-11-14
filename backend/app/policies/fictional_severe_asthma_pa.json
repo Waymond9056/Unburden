@@ -1,7 +1,7 @@
 {
   "id": "fictional-severe-asthma-policy",
   "name": "Aether Health — Severe Asthma Prior Authorization (FICTIONAL)",
-  "disclaimer": "FICTIONAL illustrative policy for the Unburden hackathon demo only. Not the requirements of any real insurer.",
+  "disclaimer": "",
   "logic": "AND",
   "as_of_date": "2025-11-01",
   "requirements": [

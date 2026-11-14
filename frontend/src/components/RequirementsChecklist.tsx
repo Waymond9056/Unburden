@@ -160,9 +160,6 @@ export function RequirementsChecklist({
           <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
             {evaluation.policy_name}
           </p>
-          <p className="mt-2 max-w-3xl text-xs leading-5 text-muted">
-            {evaluation.disclaimer}
-          </p>
         </div>
         <div className="text-right">
           <div

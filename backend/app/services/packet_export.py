@@ -45,7 +45,6 @@ def _cover_pdf_bytes(patient: Patient, packet: EvidencePacket) -> bytes:
             "documents. Unburden does not transmit this packet to any insurer and does not "
             "approve coverage.",
         ),
-        ("Normal", packet.disclaimer),
         ("Normal", f"<b>Patient:</b> {patient.display_name}"),
         ("Normal", f"<b>Patient ID:</b> {patient.id}"),
         (
@@ -56,6 +55,9 @@ def _cover_pdf_bytes(patient: Patient, packet: EvidencePacket) -> bytes:
         ("Normal", f"<b>Policy ID:</b> {packet.policy_id}"),
         ("Heading2", "Attached supporting documents"),
     ]
+    if packet.disclaimer.strip():
+        # Insert after the coverage notice, before patient fields.
+        blocks.insert(3, ("Normal", packet.disclaimer))
 
     if not packet.selected_documents:
         blocks.append(
