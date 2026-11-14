@@ -314,13 +314,13 @@ export function Dashboard() {
       <header className="mb-8">
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-5xl text-ink">Unburden</h1>
+            <h1 className="font-display text-3xl text-ink">Unburden</h1>
           </div>
           <div className="flex flex-col items-start gap-1 sm:items-end">
             <button
               type="button"
               onClick={() => void handleReseed()}
-              className="border border-line bg-white/50 px-4 py-2 text-sm text-ink-soft hover:border-ink/30 hover:bg-white"
+              className="border border-line bg-white/50 px-4 py-2 text-sm text-ink-soft hover:border-ink/30 hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
             >
               Reload demo documents
             </button>
@@ -331,8 +331,14 @@ export function Dashboard() {
 
       {patient && (
         <div className="mb-6 border-y border-line/80 py-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-muted">
+            Patient
+          </p>
           <p className="mt-1 font-display text-2xl text-ink">
             {patient.display_name}
+          </p>
+          <p className="text-sm text-muted">
+            DOB {patient.date_of_birth ?? "—"}
           </p>
         </div>
       )}
@@ -347,7 +353,7 @@ export function Dashboard() {
         <button
           type="button"
           onClick={() => setActiveTab("requirements")}
-          className="mb-6 w-full border border-[#c48a2e]/40 bg-[#fff8ef] px-4 py-3 text-left text-sm text-[#8a6230] hover:opacity-90"
+          className="mb-6 w-full border border-[#c48a2e]/40 bg-[#fff8ef] px-4 py-3 text-left text-sm text-[#8a6230] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         >
           {statusChanges.length} insurance requirement
           {statusChanges.length === 1 ? "" : "s"} changed — view checklist
