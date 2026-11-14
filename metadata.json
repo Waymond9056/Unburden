@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.13.4",
+  "checkpoint_id": "01M7CK0R5BMAG0ZWEB0QZNAZ1V",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "MVP.md",
+    "README.md",
+    "backend/app/api/patients.py",
+    "backend/app/models/schemas.py",
+    "backend/app/services/evidence_packet.py",
+    "backend/tests/test_evidence_packet.py",
+    "frontend/src/components/Dashboard.tsx",
+    "frontend/src/components/EvidencePacketPanel.tsx",
+    "frontend/src/lib/api.ts",
+    "frontend/src/lib/types.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 21381,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1796480,
+    "output_tokens": 14952,
+    "api_call_count": 1
+  },
+  "redaction": {
+    "replacements": 2,
+    "layers": {
+      "betterleaks": 2,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 1,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}

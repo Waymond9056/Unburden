@@ -1,0 +1,15 @@
+**Milestone 4:** Document selection optimization and missing-evidence checklist (wire into the evidence packet / missing-info panels).
+
+---
+
+I'd keep this milestone simple but real.
+
+Have Cursor implement an exact minimum-cost selection algorithm over verified document-to-requirement mappings for a small dataset, plus a missing-requirements checklist derived from Milestone 3.
+
+Don't build automated records retrieval, insurer submission, or complicated document acquisition planning yet.
+
+One additional detail: minimizing entire PDF count or page count is only a proxy for review burden. In practice, the best packet also depends on evidence strength, insurer documentation requirements, and source reliability. Those should take priority over size.
+
+The main distinction: Milestone 3 figures out what we can prove. Milestone 4 figures out what evidence we should send, and what we still need to obtain.
+
+That makes Milestone 4 the step where Unburden starts producing its actual deliverable: a concise, source-backed prior authorization evidence packet for a healthcare professional to review.
