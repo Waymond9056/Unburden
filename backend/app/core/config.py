@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.x.ai/v1"
     llm_model: str = "grok-4-1-fast-reasoning"
 
-    default_patient_id: str = "patient-alex-rivera"
+    default_patient_id: str = "patient-raymond-yao"
 
     @property
     def cors_origin_list(self) -> list[str]:

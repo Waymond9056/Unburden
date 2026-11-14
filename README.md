@@ -61,7 +61,7 @@ cd frontend
 npm run dev
 ```
 
-On first API boot, Unburden creates the synthetic patient **Alex Rivera** and loads seed PDFs.
+On first API boot, Unburden creates the synthetic patient **Raymond Yao** and loads seed PDFs.
 
 ## Milestone 1 API
 
@@ -76,12 +76,12 @@ On first API boot, Unburden creates the synthetic patient **Alex Rivera** and lo
 | GET | `/api/patients/{id}/observations` | Observations (empty until M2) |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
 
-Default patient id: `patient-alex-rivera`
+Default patient id: `patient-raymond-yao`
 
 Example upload:
 
 ```bash
-curl -X POST "http://localhost:8000/api/patients/patient-alex-rivera/documents" \
+curl -X POST "http://localhost:8000/api/patients/patient-raymond-yao/documents" \
   -F "file=@data/seed/lab_eosinophils.pdf" \
   -F "document_type=laboratory_report"
 ```

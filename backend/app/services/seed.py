@@ -15,7 +15,7 @@ from app.services.documents import store_and_index_pdf
 settings = get_settings()
 
 PATIENT_ID = settings.default_patient_id
-PATIENT_NAME = "Alex Rivera"
+PATIENT_NAME = "Raymond Yao"
 PATIENT_DOB = date(1985, 3, 12)
 
 # Fictional disclaimer used on every generated page
