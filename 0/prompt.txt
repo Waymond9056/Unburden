@@ -1,0 +1,17 @@
+onto milestone 3
+
+---
+
+nice. just put insurance requirements on another tab lowkey
+
+---
+
+what is the algorithm running right now that enables the searching and retrieval of this evidence? simple if statements for pattern matching?
+
+---
+
+lets clean up the insurance requiremenets section. you can remove the text underneath in quotation marks for everything, and also the text that says "found x accpeted sourcebacked canddiates".
+
+---
+
+and different colors for accepted vs needs review vs not established
