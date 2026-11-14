@@ -85,15 +85,15 @@ On first API boot, Unburden creates the synthetic patient **Raymond Yao** and lo
 | GET | `/api/patients/{id}/evidence-packet/export` | Download PA packet PDF (cover + attached docs) |
 | POST | `/api/demo/seed` | Regenerate / reload synthetic docs |
 
-## Milestone 2–3 workspace
+## Workspace
 
 Open http://localhost:3000:
 
-- Document library + PDF upload + page text / PDF preview
-- Requirement-linked retrieval with exact citations (M2)
-- Structured verification checklist: SUPPORTED / NOT_ESTABLISHED / NEEDS_REVIEW (M3)
-- Click citations to open the source document
-- Evidence packet panel still placeholder (M4)
+- Documents: library, PDF upload, page text, and PDF preview
+- Requirement evidence: retrieved passages with verification status
+- Insurance requirements: SUPPORTED / NOT_ESTABLISHED / NEEDS_REVIEW
+- Evidence packet: selected documents, missing items, and packet PDF download
+- Click a citation to open the source document on the cited page
 
 The sample policy is **fictional** and labeled as such. Candidates from M2 are not
 automatically accepted; M3 applies temporal, numeric, document-type, and quote-in-source

@@ -10,6 +10,12 @@ type EvidencePacketPanelProps = {
   onExport: () => void;
 };
 
+function typeLabel(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "Uploaded";
+  return trimmed.replaceAll("_", " ");
+}
+
 function statusStyles(status: string) {
   switch (status) {
     case "NEEDS_REVIEW":
@@ -45,7 +51,7 @@ export function EvidencePacketPanel({
         <button
           type="button"
           onClick={onRefresh}
-          className="mt-4 border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep"
+          className="mt-4 border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         >
           Build packet
         </button>
@@ -72,14 +78,14 @@ export function EvidencePacketPanel({
             <button
               type="button"
               onClick={onExport}
-              className="border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-deep"
+              className="border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-deep focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
             >
               Download packet PDF
             </button>
             <button
               type="button"
               onClick={onRefresh}
-              className="border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white"
+              className="border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
             >
               Rebuild packet
             </button>
@@ -105,11 +111,11 @@ export function EvidencePacketPanel({
                 <button
                   type="button"
                   onClick={() => onOpenDocument(doc.document_id)}
-                  className="w-full border border-[#1b7a6d]/40 bg-[#e7f6f2] px-3 py-3 text-left text-[#0f5a51] transition hover:opacity-90"
+                  className="w-full border border-[#1b7a6d]/40 bg-[#e7f6f2] px-3 py-3 text-left text-[#0f5a51] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
                 >
                   <div className="font-medium">{doc.source_label}</div>
                   <div className="mt-1 text-xs uppercase tracking-[0.12em]">
-                    {doc.document_type.replaceAll("_", " ") || "untyped"} ·{" "}
+                    {typeLabel(doc.document_type)} ·{" "}
                     {doc.page_count} page{doc.page_count === 1 ? "" : "s"}
                   </div>
                   <div className="mt-2 text-sm">

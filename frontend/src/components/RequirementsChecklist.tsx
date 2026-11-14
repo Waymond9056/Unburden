@@ -66,6 +66,9 @@ function RequirementBlock({
               {change.to.replaceAll("_", " ")}
             </p>
           )}
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-soft">
+            {item.explanation}
+          </p>
         </div>
         <span
           className={`border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(item.status)}`}
@@ -87,7 +90,7 @@ function RequirementBlock({
                     candidate.supporting_quote,
                   )
                 }
-                className={`w-full border px-3 py-2 text-left transition hover:opacity-90 ${statusStyles(candidate.verification_status)}`}
+                className={`w-full border px-3 py-2 text-left hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${statusStyles(candidate.verification_status)}`}
               >
                 <div className="text-xs uppercase tracking-[0.12em]">
                   {candidate.verification_status.replaceAll("_", " ")} · page{" "}
@@ -120,7 +123,7 @@ export function RequirementsChecklist({
 }: RequirementsChecklistProps) {
   if (loading) {
     return (
-      <section className="animate-fade text-sm text-muted">
+      <section className="text-sm text-muted">
         Evaluating policy requirements…
       </section>
     );
@@ -137,7 +140,7 @@ export function RequirementsChecklist({
         <button
           type="button"
           onClick={onReevaluate}
-          className="mt-4 border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep"
+          className="mt-4 border border-accent bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-deep focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
         >
           Evaluate policy
         </button>
@@ -170,7 +173,7 @@ export function RequirementsChecklist({
           <button
             type="button"
             onClick={onReevaluate}
-            className="mt-2 block border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white"
+            className="mt-2 block border border-line bg-white/50 px-3 py-1.5 text-xs text-ink-soft hover:bg-white focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
           >
             Re-evaluate
           </button>

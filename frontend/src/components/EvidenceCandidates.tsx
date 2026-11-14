@@ -15,6 +15,25 @@ function groupedCandidates(candidates: EvidenceCandidate[]) {
   return [...groups.values()];
 }
 
+function statusLabel(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "unverified_candidate") return "Unverified";
+  return trimmed.replaceAll("_", " ");
+}
+
+function statusStyles(status: string) {
+  switch (status) {
+    case "accepted":
+      return "border-[#1b7a6d]/50 bg-[#e7f6f2] text-[#0f5a51]";
+    case "needs_review":
+      return "border-[#c48a2e]/45 bg-[#fff6e8] text-[#8a6230]";
+    case "rejected":
+      return "border-[#b45656]/40 bg-[#fbeaea] text-[#8f3d3d]";
+    default:
+      return "border-line bg-mist/60 text-ink-soft";
+  }
+}
+
 export function EvidenceCandidates({
   candidates,
   onOpenSource,
@@ -22,19 +41,13 @@ export function EvidenceCandidates({
   const groups = groupedCandidates(candidates);
 
   return (
-    <section className="border border-line bg-white/55 p-5">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-accent-deep">
-            Milestone 2 · policy-driven retrieval
-          </p>
-          <h2 className="mt-1 font-display text-2xl text-ink">
-            Requirement evidence candidates
-          </h2>
+          <h2 className="font-display text-2xl text-ink">Requirement evidence</h2>
           <p className="mt-1 max-w-3xl text-sm text-muted">
-            Potentially relevant passages retrieved for the fictional active policy.
-            Candidates are not accepted evidence until Milestone 3 verifies the policy
-            constraints.
+            Passages retrieved for the fictional policy, labeled with their
+            verification status.
           </p>
         </div>
         <div className="text-sm text-muted">
@@ -64,14 +77,11 @@ export function EvidenceCandidates({
                     key={candidate.id}
                     className="flex min-w-0 flex-col border border-line bg-paper/55 p-4"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent-deep">
-                        Potential evidence
-                      </p>
-                      <span className="shrink-0 border border-warning/35 bg-[#fff8ef] px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-warning">
-                        Unverified
-                      </span>
-                    </div>
+                    <span
+                      className={`self-start border px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] ${statusStyles(candidate.verification_status)}`}
+                    >
+                      {statusLabel(candidate.verification_status)}
+                    </span>
                     <blockquote className="mt-3 flex-1 border-l-2 border-accent/45 pl-3 text-sm leading-6 text-ink-soft">
                       “{candidate.supporting_quote}”
                     </blockquote>
