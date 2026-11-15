@@ -3,7 +3,7 @@
   "checkpoint_id": "01M7EEGCP86KY9TRPAV89RR386",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 12,
+  "checkpoints_count": 13,
   "files_touched": [
     "frontend/src/components/DocumentLibrary.tsx",
     "frontend/src/components/PatientUploadView.tsx"
@@ -22,24 +22,31 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 252506,
+    "input_tokens": 299737,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 1948928,
-    "output_tokens": 9108,
-    "api_call_count": 12
+    "cache_read_tokens": 8004352,
+    "output_tokens": 21261,
+    "api_call_count": 13
   },
   "redaction": {
-    "replacements": 37,
+    "replacements": 44,
     "layers": {
       "betterleaks": 14,
       "connection_string": 0,
       "credential_key": 0,
       "credential_value": 30,
       "credentialed_uri": 0,
-      "entropy": 13,
+      "entropy": 20,
       "key_context": 0,
       "provider_token": 0,
       "shell_stdin": 0
