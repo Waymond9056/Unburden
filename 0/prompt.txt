@@ -1,0 +1,59 @@
+make this the Favicon (the small logo), and make the name with logo appear at the top of the page, replacing the text
+
+---
+
+get rid of the DOB under the patient's name
+
+---
+
+remove the part that says pdf only and facetime video
+
+---
+
+remove this part "Files are stored for Raymond Yao’s chart and appear immediately in the care provider view."
+
+---
+
+this page looks kinda stuipd now though. any thoughts to improve it? if not, no worries
+
+---
+
+go for it
+
+---
+
+alr lemme try a little experimental with it. take inspiration from online websites that are done well. do you think you could maybe like darken the balloon logo, put that in the background of this page, and then have the actual content appear transparently above it. do you know what im talking about?
+
+---
+
+this looks a little finicky. how about instead of having the patient name,since its alreaady on the dropdown just fade it. and then combine the two rows into 1. so put the insurance selection and reload button onto the row with the section selection
+
+---
+
+thanks! looking at this page now, i feel like the 3 columns style is like they're all competing for space
+
+is there a way to fix this? keep it easy to navigate and have it on the page but make it look better
+
+---
+
+when i delete a document and it changes something on the insurance side, it temporarily glithces until i refresh
+
+---
+
+identify and fix
+
+---
+
+why does uploading a docuemnt automatically route me to the insurance requirements page? fix this issue without raising previous errors
+
+---
+
+replace get a call with Upload with Chert
+
+---
+
+remove this part
+
+---
+
+myb bring it back
