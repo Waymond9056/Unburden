@@ -1,0 +1,33 @@
+super happy with this. merge this into main
+
+---
+
+what does LiveKit do in this stack?
+
+---
+
+what actually is livekit
+
+---
+
+so does livekit enable the pdf to be uploaded?
+
+---
+
+is that in the agent's instructionset?
+
+---
+
+could we do this without livekit?
+
+---
+
+how does the image recognition work? in summary with technical keywords
+
+---
+
+what's the regex cleanup
+
+---
+
+what is this called
