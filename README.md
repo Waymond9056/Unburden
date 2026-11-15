@@ -11,13 +11,13 @@ Unburden automatically parses all of these documents and stores it into that pat
 Once every condition is satisfied, the careprovider can simply export all the documents into bundled prior authorization request, ready to send to their insurance provider. 
 
 ## How we built it
-# Document upload with Chert
+### Document upload with Chert
 When an agent calls a patient, a LiveKit session is created. This dispatches a Chert AI voice agent to call the patient, which extracts the PDF from the video and uploads it to the Unburden database for that patient.
 
-# PDF parsing with PyMuPDF
+### PDF parsing with PyMuPDF
 For regularly uploaded pdfs, PyMuPDF extracts all of the text from them. However, with uploaded photos (including FaceTime pictures), this library doesn't work. Instead, we combined PyMuPDF with Tesseract OCR to parse these more complicated photos. Because this had a couple of typos, this is cleaned up with post-OCR text normalization to make it ready for NLP tasks. 
 
-# Insurance requirement matching with DeBERTa NLI
+### Insurance requirement matching with DeBERTa NLI
 This is where the bulk of the project's technical depth is, in my opinion. Once documents are in the patient record, Unburden evaluates them against a structured insurance policy. Each requirement is encoded with retrieval terms, acceptable document types, temporal windows, numeric thresholds, and phrase-level accept/reject rules.
 
 To figure out whether a passage actually supports an insurance requirement, we use a DeBERTa-v3 NLI model. It takes the extracted passage and the requirement as a premise. We calibrated the decision thresholds on TREC clinical-trials data instead of fine-tuning weights, and structured checks (dates, numbers, document types, quote-in-source) still decide what gets accepted the. Tldr: We combined an open source zero-shot NLP model (DeBERTa) with M3 (my personal name for milestone 3, which are structured checks), and calibrated this on real clinical trial data that only some parts of DeBERTa captures.
