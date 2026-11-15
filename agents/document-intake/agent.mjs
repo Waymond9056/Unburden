@@ -12,7 +12,7 @@ import {
 } from '@livekit/rtc-node';
 import { collectBestFrames, followVideoTrack, framesToPdf } from './capture.mjs';
 import { runAgent } from './chert-rooms.mjs';
-import { drawFace, FPS, HEIGHT, WIDTH } from './face.mjs';
+import { drawBlank, drawFace, FPS, HEIGHT, WIDTH } from './face.mjs';
 import { greetWhenFaceTimeReady } from './greet.mjs';
 import { publishSilentMic } from './silent-audio.mjs';
 import { synthesizeSpeechPcm16 } from './speak.mjs';
@@ -74,9 +74,16 @@ const agent = defineAgent({
     const videoTrack = LocalVideoTrack.createVideoTrack('agent-video', source);
     let tick = 0;
     let speaking = false;
+    /** When true, publish a blank frame so FaceTime PiP does not cover the document. */
+    let blankCamera = false;
     const paint = () =>
       source.captureFrame(
-        new VideoFrame(drawFace(tick++, speaking), WIDTH, HEIGHT, VideoBufferType.RGBA),
+        new VideoFrame(
+          blankCamera ? drawBlank() : drawFace(tick++, speaking),
+          WIDTH,
+          HEIGHT,
+          VideoBufferType.RGBA,
+        ),
       );
     paint();
     await ctx.room.localParticipant.publishTrack(videoTrack, { source: TrackSource.SOURCE_CAMERA });
@@ -170,28 +177,37 @@ const agent = defineAgent({
         };
       }
       console.log('[document-intake] capturing frames…');
-      // One sharp page beats two FaceTime-chrome duplicates for OCR.
-      const frames = await collectBestFrames(() => videoFollow.getLatest(), {
-        durationMs: 10_000,
-        count: 1,
-        minScore: 40,
-      });
-      if (!frames.length) {
+      blankCamera = true;
+      paint();
+      // Let FaceTime swap the PiP to blank before we sample frames.
+      await new Promise(r => setTimeout(r, 900));
+      try {
+        // One sharp page beats two FaceTime-chrome duplicates for OCR.
+        const frames = await collectBestFrames(() => videoFollow.getLatest(), {
+          durationMs: 10_000,
+          count: 1,
+          minScore: 40,
+        });
+        if (!frames.length) {
+          return {
+            ok: false,
+            message: 'Could not get a clear frame. Ask the caller to hold the document closer and steadier.',
+          };
+        }
+        const pdfBytes = await framesToPdf(frames);
+        const document = await uploadCapturedPdf(pdfBytes, { patientId, sessionId });
+        uploaded = true;
+        console.log(`[document-intake] uploaded document ${document.id}`);
         return {
-          ok: false,
-          message: 'Could not get a clear frame. Ask the caller to hold the document closer and steadier.',
+          ok: true,
+          message: `Uploaded as “${document.source_label || document.original_filename}”.`,
+          document_id: document.id,
+          source_label: document.source_label,
         };
+      } finally {
+        blankCamera = false;
+        paint();
       }
-      const pdfBytes = await framesToPdf(frames);
-      const document = await uploadCapturedPdf(pdfBytes, { patientId, sessionId });
-      uploaded = true;
-      console.log(`[document-intake] uploaded document ${document.id}`);
-      return {
-        ok: true,
-        message: `Uploaded as “${document.source_label || document.original_filename}”.`,
-        document_id: document.id,
-        source_label: document.source_label,
-      };
     };
 
     const shutdownMedia = async () => {

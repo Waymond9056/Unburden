@@ -7,6 +7,21 @@ export const FPS = 15;
 const BACKGROUND = [16, 40, 52], FACE = [141, 224, 196], INK = [16, 40, 52], ACCENT = [255, 200, 118];
 
 /**
+ * Solid dark frame used while capturing so FaceTime’s PiP does not cover document text.
+ * Returns WIDTH x HEIGHT pixels, four bytes each: red, green, blue, alpha.
+ */
+export function drawBlank() {
+  const pixels = new Uint8Array(WIDTH * HEIGHT * 4);
+  for (let i = 0; i < pixels.length; i += 4) {
+    pixels[i] = BACKGROUND[0];
+    pixels[i + 1] = BACKGROUND[1];
+    pixels[i + 2] = BACKGROUND[2];
+    pixels[i + 3] = 255;
+  }
+  return pixels;
+}
+
+/**
  * A simple animated face. `tick` counts frames; `speaking` is true while the agent talks, and opens the mouth.
  * Returns WIDTH x HEIGHT pixels, four bytes each: red, green, blue, alpha.
  */
