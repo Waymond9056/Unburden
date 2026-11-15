@@ -139,7 +139,9 @@ export function PatientUploadView({ patientId }: { patientId: string }) {
             Send documents to your care team
           </h1>
           <p className="mx-auto mt-4 max-w-md text-base leading-7 text-ink-soft">
-            Upload a PDF, or upload with Chert to capture a document on camera.
+            {canRing
+              ? "Upload a PDF, or upload with Chert to capture a document on camera."
+              : "Upload a PDF for your care team to review."}
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">

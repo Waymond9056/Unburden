@@ -67,7 +67,7 @@ export function DocumentLibrary({
       <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto border-y border-line/80 py-2">
         {documents.length === 0 ? (
           <li className="px-1 py-8 text-sm text-muted">
-            No documents yet. Upload a PDF or reload the demo set.
+            No documents yet. Upload a PDF to get started.
           </li>
         ) : (
           documents.map((doc) => {
