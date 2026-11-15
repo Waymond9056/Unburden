@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { listPatients } from "@/lib/api";
 import {
@@ -78,14 +79,20 @@ export function AppShell() {
     updateUrl(view, nextPatientId);
   }
 
-  const activePatient =
-    patients.find((patient) => patient.id === patientId) ?? null;
-
   return (
     <div className="min-h-screen">
       <div className="border-b border-line/80 bg-white/40">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8">
-          <h1 className="font-display text-3xl text-ink">Unburden</h1>
+          <h1 className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Unburden"
+              width={188}
+              height={58}
+              className="h-10 w-auto"
+              priority
+            />
+          </h1>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-ink-soft">
               <span className="text-xs uppercase tracking-[0.14em] text-muted">
@@ -147,10 +154,7 @@ export function AppShell() {
       </div>
 
       {view === "patient" ? (
-        <PatientUploadView
-          patientId={patientId}
-          patientName={activePatient?.display_name ?? patientId}
-        />
+        <PatientUploadView patientId={patientId} />
       ) : (
         <Dashboard key={patientId} patientId={patientId} />
       )}

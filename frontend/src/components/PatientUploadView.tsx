@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ringDocumentAssistant, getChertSession, uploadDocument } from "@/lib/api";
 import type { ChertSession } from "@/lib/types";
@@ -32,13 +33,7 @@ function phaseFromSession(session: ChertSession): RingPhase {
   return "ringing";
 }
 
-export function PatientUploadView({
-  patientId,
-  patientName,
-}: {
-  patientId: string;
-  patientName: string;
-}) {
+export function PatientUploadView({ patientId }: { patientId: string }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUploaded, setLastUploaded] = useState<string | null>(null);
@@ -114,85 +109,91 @@ export function PatientUploadView({
   const ringingBusy =
     ringPhase === "preparing" || ringPhase === "ringing" || ringPhase === "active";
 
+  const statusMessage =
+    ringPhase === "uploaded" && ringLabel
+      ? `Uploaded “${ringLabel}”. Your care provider can review it now.`
+      : lastUploaded && !error && ringPhase !== "uploaded"
+        ? `Uploaded “${lastUploaded}”. Your care provider can review it now.`
+        : null;
+  const statusError = ringError || error;
+
   return (
-    <div className="relative z-10 mx-auto flex min-h-[70vh] w-full max-w-3xl flex-col justify-center px-5 py-16 sm:px-8">
-      <p className="max-w-xl text-lg leading-7 text-ink-soft">
-        Upload medical PDFs for your care team. Your clinician reviews them in
-        the care provider workspace.
-      </p>
+    <section className="patient-upload-stage relative overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="patient-upload-mark-wrap absolute left-1/2 top-[46%] h-[min(92vw,40rem)] w-[min(92vw,40rem)] -translate-x-1/2 -translate-y-1/2">
+          <Image
+            src="/logo-mark.png"
+            alt=""
+            fill
+            sizes="min(92vw, 40rem)"
+            className="patient-upload-mark object-contain select-none"
+            priority
+          />
+        </div>
+        <div className="patient-upload-wash absolute inset-0" />
+      </div>
 
-      <div className="mt-10 border-y border-line/80 py-8">
-        <h2 className="font-display text-2xl text-ink">Document upload</h2>
-        <p className="mt-2 text-sm text-muted">
-          PDF only. Files are stored for {patientName}’s chart and appear
-          immediately in the care provider view.
-        </p>
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-2xl flex-col items-center justify-center px-5 py-16 text-center sm:px-8">
+        <div className="patient-upload-enter patient-upload-glass w-full px-6 py-10 sm:px-10 sm:py-12">
+          <h1 className="font-display text-4xl leading-tight text-ink sm:text-5xl">
+            Send documents to your care team
+          </h1>
+          <p className="mx-auto mt-4 max-w-md text-base leading-7 text-ink-soft">
+            Upload a PDF, or upload with Chert to capture a document on camera.
+          </p>
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <label
-            className={`inline-flex cursor-pointer border border-accent bg-accent px-5 py-3 text-sm font-medium text-white transition hover:bg-accent-deep ${
-              uploading ? "uploading-pulse pointer-events-none opacity-70" : ""
-            }`}
-          >
-            {uploading ? "Uploading…" : "Upload PDF"}
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              className="sr-only"
-              disabled={uploading}
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (file) await handleUpload(file);
-              }}
-            />
-          </label>
-
-          {canRing && (
-            <button
-              type="button"
-              onClick={() => void handleRing()}
-              disabled={ringingBusy}
-              className={`inline-flex border border-ink px-5 py-3 text-sm font-medium text-ink transition hover:bg-mist/60 disabled:cursor-not-allowed disabled:opacity-60 ${
-                ringingBusy ? "uploading-pulse" : ""
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <label
+              className={`inline-flex min-w-[10.5rem] cursor-pointer items-center justify-center border border-accent bg-accent px-6 py-3.5 text-sm font-medium text-white transition hover:bg-accent-deep ${
+                uploading ? "uploading-pulse pointer-events-none opacity-70" : ""
               }`}
             >
-              {ringPhase === "preparing"
-                ? "Preparing agent…"
-                : ringPhase === "ringing"
-                  ? "Ringing your phone…"
-                  : ringPhase === "active"
-                    ? "On FaceTime…"
-                    : "Ring document assistant"}
-            </button>
+              {uploading ? "Uploading…" : "Upload PDF"}
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="sr-only"
+                disabled={uploading}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) await handleUpload(file);
+                }}
+              />
+            </label>
+
+            {canRing && (
+              <button
+                type="button"
+                onClick={() => void handleRing()}
+                disabled={ringingBusy}
+                className={`inline-flex min-w-[10.5rem] items-center justify-center border border-ink/80 bg-white/35 px-6 py-3.5 text-sm font-medium text-ink transition hover:bg-white/55 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  ringingBusy ? "uploading-pulse" : ""
+                }`}
+              >
+                {ringPhase === "preparing"
+                  ? "Preparing…"
+                  : ringPhase === "ringing"
+                    ? "Ringing…"
+                    : ringPhase === "active"
+                      ? "On FaceTime…"
+                      : "Upload with Chert"}
+              </button>
+            )}
+          </div>
+
+          {(statusMessage || statusError) && (
+            <div className="mx-auto mt-8 max-w-md" aria-live="polite">
+              {statusMessage && (
+                <p className="text-sm text-accent-deep">{statusMessage}</p>
+              )}
+              {statusError && (
+                <p className="mt-2 text-sm text-warning">{statusError}</p>
+              )}
+            </div>
           )}
         </div>
-
-        {canRing && (
-          <p className="mt-3 max-w-xl text-sm text-muted">
-            FaceTime Video: the assistant calls you, asks you to hold up a
-            document, captures camera frames, and saves a PDF to your chart.
-          </p>
-        )}
-
-        {ringPhase === "uploaded" && ringLabel && (
-          <p className="mt-4 text-sm text-[#0f5a51]">
-            FaceTime uploaded “{ringLabel}”. Your care provider can review it now.
-          </p>
-        )}
-        {ringError && (
-          <p className="mt-4 text-sm text-warning">{ringError}</p>
-        )}
-
-        {lastUploaded && !error && ringPhase !== "uploaded" && (
-          <p className="mt-4 text-sm text-[#0f5a51]">
-            Uploaded “{lastUploaded}”. Your care provider can review it now.
-          </p>
-        )}
-        {error && (
-          <p className="mt-4 text-sm text-warning">{error}</p>
-        )}
       </div>
-    </div>
+    </section>
   );
 }
