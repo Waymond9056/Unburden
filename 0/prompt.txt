@@ -1,0 +1,19 @@
+# Document upload with Chert
+When an agent calls a patient, a LiveKit session is created. This dispatches a Chert AI voice agent to call the patient, which extracts the PDF from the video and uploads it to the Unburden database for that patient.
+
+# PDF Parsing with PyMuPDF
+For regularly uploaded pdfs, PyMuPDF extracts all of the text from them. However, with uploaded photos (including FaceTime pictures), this library doesn't work. Instead, we combined PyMuPDF with Tesseract OCR to parse these more complicated photos. Because this had a couple of typos, this is cleaned up with post-OCR text normalization to make it ready for NLP tasks. 
+
+# 
+
+the next step is talking about the insurance requirement matching
+
+---
+
+make it sound more like me. just the part that explains what we built in terms of the model we built
+
+---
+
+## Challenges we ran into
+
+look through the cursor history for htis project and summarize the primary challenges we went through
